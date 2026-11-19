@@ -233,10 +233,10 @@ Errors use **ProblemDetails** (RFC 9457) with stable error codes (`ALREADY_ON_SH
 - **Testing:**
   - unit tests for `ShiftService` with a fake `ITrustedClock` (DST, overnight, out ≤ in, flags);
   - provider tests with mocked HTTP (timeouts, garbage, fallback);
-  - integration tests against the real local SQL Server for the unique-index / concurrency guarantees.
+  - integration tests against a real SQL Server (the Docker container) for the unique-index / concurrency guarantees.
 - **Security:** hashed passwords (Identity), role-based authorization on every endpoint, employees can only read their own data, no secrets in the repo (user-secrets / env vars; dev defaults documented).
 - **Observability:** structured logs for every punch attempt (employee, provider used, latency, outcome); provider failures logged as warnings.
-- **Local setup (no Docker, D-12):** SQL Server (Express or LocalDB) on Windows → `dotnet run` (auto-applies migrations + seed in Development) → `npm run dev`. The connection string is configurable, so any SQL Server instance works.
+- **Local setup (Docker, D-12):** `docker compose up -d` starts SQL Server 2022 and the API (`dotnet watch`, auto-applies migrations + seed in Development) → `npm run dev` for the UI. The README also documents running without Docker (`dotnet run` against any SQL Server, via a configurable connection string).
 - **UX:** responsive (punching from a phone is realistic); one-tap primary action; clear error messages.
 
 ---
@@ -245,7 +245,7 @@ Errors use **ProblemDetails** (RFC 9457) with stable error codes (`ALREADY_ON_SH
 
 | When | Milestone |
 |---|---|
-| Thu evening | **T0** time-provider spike (pick primary/fallback) · repo skeleton · CLAUDE.md · connect to local SQL Server · EF model + migrations |
+| Thu evening | **T0** time-provider spike (pick primary/fallback) · repo skeleton · CLAUDE.md · docker-compose (SQL Server + API) ✅ · EF model + migrations |
 | Fri | **F2 + F3** trusted clock, ShiftService, punch endpoints, tests (DST, concurrency) · **F1** auth |
 | Sat | React: login, punch screen, my history · manager dashboard + corrections (F5–F7) |
 | Sat night | README, DECISIONS.md, cleanup, end-to-end run from a clean clone |
@@ -261,4 +261,8 @@ Commit small and often. Plans live in `docs/plans/`; the `.claude/` folder and C
 2. **Way of working:** build from scratch, step by step, each step explained and approved before it's done. Manager features (F5–F7) stay in scope; we'll trim later if time runs short. ✅
 3. **Forgotten-shift threshold:** 14 h. ✅
 4. **Fallback time provider:** yes, we'll have a primary and a backup provider. If the T0 spike finds no reliable free backup, we go single-provider and document it as a known risk in DECISIONS.md. ✅
-5. **No Docker** (D-12): we use the **SQL Server 2022 Express** instance already installed on the dev machine (`.\SQLEXPRESS`, Windows authentication). The database is named `AttendanceClock`, so it doesn't clash with the unrelated `AttendanceDev` database already on that server. ✅
+5. **Local environment: Docker** (D-12, revised the same day). ✅
+   - *Original plan:* no Docker; run the API on Windows against the SQL Server Express already installed.
+   - *What happened:* Windows **Smart App Control** on the dev machine blocks every locally built, unsigned .NET assembly (`0x800711C7`), even through the signed `dotnet` host. Turning it off would require reinstalling Windows.
+   - *Options weighed:* turn off Smart App Control (rejected: irreversible); WSL/Ubuntu (works, but needs extra installs plus opening the Windows SQL Server to the network: TCP, a SQL login, a firewall rule); Docker (already installed, no Windows changes).
+   - *Decision:* **Docker Compose** runs both SQL Server 2022 and the API. Extra benefit: reviewers start everything with one command. The Windows SQL Server Express isn't used.
