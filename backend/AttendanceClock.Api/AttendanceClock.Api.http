@@ -1,0 +1,6 @@
+@AttendanceClock.Api_HostAddress = http://localhost:5080
+
+### Is the server alive?
+GET {{AttendanceClock.Api_HostAddress}}/health
+
+###

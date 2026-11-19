@@ -1,0 +1,55 @@
+# Local development environment.
+# Start everything:  docker compose up -d
+# Stop everything:   docker compose down        (data is kept)
+# Wipe the database: docker compose down -v
+
+services:
+  # 1) Database: Microsoft SQL Server 2022 (Developer edition, free for dev/test).
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: attendance-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      # Local-development password only. Override it by setting MSSQL_SA_PASSWORD in a .env file.
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Dev_Passw0rd_2026!}"
+    ports:
+      - "1433:1433"   # so tools on Windows (SSMS, Azure Data Studio) can look inside
+    volumes:
+      - db-data:/var/opt/mssql   # keeps the data when the container restarts
+    healthcheck:
+      # "Healthy" only once SQL Server actually answers a query.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # 2) Server: our ASP.NET Core API, run with "dotnet watch" so code changes reload automatically.
+  api:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: attendance-api
+    working_dir: /src
+    command: ["dotnet", "watch", "run", "--project", "AttendanceClock.Api", "--", "--urls", "http://0.0.0.0:5080"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__Default: "Server=db,1433;Database=AttendanceClock;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Dev_Passw0rd_2026!};TrustServerCertificate=True"
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"     # file changes from Windows are detected by polling
+      DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "1"   # restart automatically instead of asking
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    ports:
+      - "5080:5080"
+    volumes:
+      - ./backend:/src                                 # our code, shared live from Windows
+      - api-bin:/src/AttendanceClock.Api/bin            # Linux build output stays inside Docker,
+      - api-obj:/src/AttendanceClock.Api/obj            # separate from any Windows build files
+      - nuget-cache:/root/.nuget/packages               # downloaded libraries, reused between runs
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  api-bin:
+  api-obj:
+  nuget-cache:

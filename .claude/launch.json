@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "url": "http://localhost:5080",
+      "port": 5080
+    }
+  ]
+}
