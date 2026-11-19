@@ -85,12 +85,11 @@ React ──POST /api/punches/clock-in──► API ──► ITrustedClock ─�
 
 ### 4.2 What we store per punch
 For each of clock-in and clock-out:
-- `UtcInstant` (`datetime2`, UTC): source of truth for ordering and durations.
-- `ZurichOffsetMinutes` (e.g. 60 / 120): lets us reconstruct the exact Zurich wall time the employee saw, even across DST.
-- `TimeSource` (`TimeApiIo` | `WorldTimeApi` | `ManualCorrection`).
-- `SourceLatencyMs`: how long the provider took (useful for diagnosing "why does my time say 08:03").
+- **The time as a `datetimeoffset`**, e.g. `2026-11-19 08:02:00 +01:00`. One value holds both the exact instant and the Zurich UTC offset at that moment (+01:00 winter / +02:00 summer). SQL Server compares and sorts `datetimeoffset` by the underlying UTC instant, so ordering, the "out > in" check and durations are DST-safe.
+- **Source** (`varchar(32)`): the provider's name, or `ManualCorrection`.
+- Provider latency is written to the **logs**, not the database (not needed for any business query).
 
-**D-6: Store UTC + offset, display Zurich.** Durations are computed in UTC, so DST can't produce negative or off-by-an-hour shifts. Display is always Europe/Zurich, labelled ("08:02 CET" / "CEST"), whatever the viewer's browser zone.
+**D-6: Store the instant with its Zurich offset (`datetimeoffset`), display Zurich.** *(Revised during implementation: the first draft used two columns, `datetime2` UTC + offset minutes. `datetimeoffset` stores the same information in one column, so it can't get out of sync.)* Durations are computed on the instant, so DST can't produce negative or off-by-an-hour shifts. Display is always Europe/Zurich, labelled ("08:02 CET" / "CEST"), whatever the viewer's browser zone.
 
 ### 4.3 Response validation (don't trust the external API blindly)
 - The response must parse, and must report the Europe/Zurich zone with an offset of +60 or +120.
@@ -176,23 +175,22 @@ Flags never block the employee; they surface in the manager's view.
 ## 7. Data model (initial)
 
 ```
-Employees (ASP.NET Identity users + fields)
-  Id, UserName, DisplayName, Role, IsActive, CreatedAtUtc
+Employees                         ✅ implemented (migration InitialCreate)
+  Id, UserName (unique), DisplayName, PasswordHash, Role ("Employee"|"Manager"),
+  IsActive, CreatedAtUtc (DB default SYSUTCDATETIME())
 
-Shifts
+Shifts                            ✅ implemented (migration InitialCreate)
   Id                  bigint PK
-  EmployeeId          FK → Employees
-  ClockInUtc          datetime2      NOT NULL
-  ClockInOffsetMin    smallint       NOT NULL
+  EmployeeId          FK → Employees (ON DELETE RESTRICT)
+  ClockIn             datetimeoffset NOT NULL
   ClockInSource       varchar(32)    NOT NULL
-  ClockOutUtc         datetime2      NULL
-  ClockOutOffsetMin   smallint       NULL
+  ClockOut            datetimeoffset NULL
   ClockOutSource      varchar(32)    NULL
-  Flags               int (bitmask)  NOT NULL default 0
+  Flags               int (bitmask)  NOT NULL
   RowVersion          rowversion
-  CHECK (ClockOutUtc IS NULL OR ClockOutUtc > ClockInUtc)
-  UNIQUE INDEX UX_OneOpenShift ON (EmployeeId) WHERE ClockOutUtc IS NULL
-  INDEX IX_Employee_ClockIn ON (EmployeeId, ClockInUtc)
+  CHECK CK_Shifts_ClockOutAfterClockIn (ClockOut IS NULL OR ClockOut > ClockIn)
+  UNIQUE INDEX UX_Shifts_OneOpenShiftPerEmployee ON (EmployeeId) WHERE ClockOut IS NULL
+  INDEX IX_Shifts_EmployeeId_ClockIn ON (EmployeeId, ClockIn)
 
 ShiftAudits
   Id, ShiftId, ChangedByEmployeeId, ChangedAtUtc (trusted clock),
