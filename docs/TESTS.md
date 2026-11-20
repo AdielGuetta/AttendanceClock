@@ -63,7 +63,7 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 | D-10 / EC-5 | **Overnight shift** in history | Counted once, on its start date | ✅ History #2 |
 | EC-6 | Shift starting **00:30 on a DST day** (a 23-hour day) | Day boundaries computed from Zurich rules → right day | ✅ History #3 |
 | — | Shift starting **just before midnight** of the range | Not included (belongs to the previous day) | ✅ History #4 |
-| — | **Many short shifts** | Exact durations added, then rounded once (no lost minutes) | ✅ History #1b |
+| — | **Seconds that don't fill a minute** | Each shift rounds to the nearest minute; total = sum of rows (always adds up, no systematic loss) | ✅ History #1b |
 | — | **Open shift** | Shown separately, not counted in totals | ✅ History #6 |
 | — | **Someone else's shifts** | Never returned: employee id from the token, not the URL | ✅ History #5 |
 | — | **Huge or reversed date range** | `400 INVALID_RANGE` (max 93 days) | ✅ History #8 |
@@ -138,7 +138,7 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 | # | Test | Proves |
 |---|---|---|
 | 1 | Daily and range totals add up | 480 + 510 = 990 min |
-| 1b | Totals add exact durations before rounding | 3 × 1 min 40 s = 5 min, not 3 |
+| 1b | Each shift rounds to the nearest minute and totals add up | 1:40 → 2, 1:20 → 1, 0:30 → 1; total 4 = sum of rows |
 | 2 | Overnight shift counts only on its start date | D-10 |
 | 3 | Shift at 00:30 on the DST day lands on that day | EC-6, Zurich day boundaries |
 | 4 | Shifts outside the range are not included | Boundary just before midnight |

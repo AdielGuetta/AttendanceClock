@@ -37,18 +37,16 @@ public sealed class HistoryService(AppDbContext db, ITrustedClock clock)
         var open = await db.Shifts.AsNoTracking()
             .FirstOrDefaultAsync(s => s.EmployeeId == employeeId && s.ClockOut == null, ct);
 
-        // Totals add the EXACT durations first and round down only once, so many short shifts don't
-        // lose time to per-shift rounding (e.g. 3 × 1 min 40 s = 5 min, not 3).
-        static int WholeMinutes(IEnumerable<Domain.Shift> s) =>
-            (int)TimeSpan.FromTicks(s.Sum(x => (x.ClockOut!.Value - x.ClockIn).Ticks)).TotalMinutes;
-
-        var days = closed
-            .GroupBy(s => ZurichTime.ToZurichDate(s.ClockIn))
-            .Select(g => new DayTotalDto(g.Key, WholeMinutes(g), g.Count()))
+        // Each shift's minutes are rounded to the NEAREST minute (ShiftDto), and totals are the sum of exactly
+        // those values, so the numbers on screen always add up. Rounding both ways is fair: there's no systematic loss.
+        var shifts = closed.Select(ShiftDto.From).ToList();
+        var days = shifts
+            .GroupBy(s => s.ZurichDate)
+            .Select(g => new DayTotalDto(g.Key, g.Sum(s => s.DurationMinutes ?? 0), g.Count()))
             .OrderBy(d => d.Date)
             .ToList();
 
-        return new HistoryDto(from, to, WholeMinutes(closed), days, closed.Select(ShiftDto.From).ToList(),
+        return new HistoryDto(from, to, days.Sum(d => d.TotalMinutes), days, shifts,
             open is null ? null : ShiftDto.From(open));
     }
 }

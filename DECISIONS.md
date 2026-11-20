@@ -31,7 +31,7 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 18 | **Clock In must be after the previous Clock Out; Clock Out after Clock In** | Two providers that disagree by a second can't create overlapping or negative shifts. The punch is refused with `503 TIME_SOURCE_INCONSISTENT` instead. |
 | 19 | **Shifts over 14 h are recorded and flagged `TooLong`**, not blocked | The record stays honest; the manager reviews it (F7). |
 | 20 | **History day boundaries use Zurich's official rules**; a shift belongs to its Clock In date (D-10) | DST days are 23 or 25 hours long. An overnight shift is counted once, on its start date. |
-| 21 | **Totals add exact durations, then round once** | Rounding each shift first quietly loses time across many short shifts. Found during the live check. |
+| 21 | **Each shift rounds to the nearest minute; totals = the sum of the rows** | First version rounded each shift *down* and added those, which loses time systematically (found in the live check). Adding exact durations fixed the loss, but then the rows didn't visibly add up to the total. Nearest-minute rounding is fair in both directions (≤ 30 s per shift) **and** what the employee sees always adds up. |
 | 22 | **History: only your own shifts (id from the token), max 93 days, default = current Zurich week via the trusted clock** | No peeking at others' data via the URL; bounded queries; "today" comes from a trusted source. |
 
 ## Edge cases
@@ -77,4 +77,6 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
   - after switching to Docker, the PRD still said "no Docker". I caught it and had it fixed;
   - `dotnet add package` pulled EF Core 11 (incompatible with .NET 10), so versions are pinned;
   - sqlcmd needed `-I` to work with the filtered index;
-  - a PowerShell 5.1 file edit garbled non-ASCII characters (wrong default encoding). Caught, fixed and added to CLAUDE.md.
+  - a PowerShell 5.1 file edit garbled non-ASCII characters (wrong default encoding). Caught, fixed and added to CLAUDE.md;
+  - its fix for the history rounding bug was mathematically right but made the rows not visibly add up to the total.
+    I pushed back from the user's point of view, and we switched to nearest-minute rounding (DECISIONS #21).

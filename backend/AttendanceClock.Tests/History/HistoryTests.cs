@@ -37,18 +37,20 @@ public class HistoryTests(PunchFixture fixture) : IClassFixture<PunchFixture>
     }
 
     [Fact] // 1b
-    public async Task Totals_add_exact_durations_before_rounding()
+    public async Task Each_shift_rounds_to_the_nearest_minute_and_totals_add_up()
     {
-        // Three shifts of 1 min 40 s each = 5 min exactly. Rounding each one first would give only 3.
+        // 1 min 40 s → 2 (up) · 1 min 20 s → 1 (down) · 0 min 30 s → 1 (half rounds up).
         var (client, id) = await fixture.NewEmployeeClientAsync();
         await fixture.AddShiftAsync(id, "2026-11-16T08:00:00+01:00", "2026-11-16T08:01:40+01:00");
-        await fixture.AddShiftAsync(id, "2026-11-16T09:00:00+01:00", "2026-11-16T09:01:40+01:00");
-        await fixture.AddShiftAsync(id, "2026-11-16T10:00:00+01:00", "2026-11-16T10:01:40+01:00");
+        await fixture.AddShiftAsync(id, "2026-11-16T09:00:00+01:00", "2026-11-16T09:01:20+01:00");
+        await fixture.AddShiftAsync(id, "2026-11-16T10:00:00+01:00", "2026-11-16T10:00:30+01:00");
 
         var history = await GetHistory(client, "?from=2026-11-16&to=2026-11-16");
 
-        Assert.Equal(5, history!.TotalMinutes);
-        Assert.Equal(5, Assert.Single(history.Days).TotalMinutes);
+        Assert.Equal([2, 1, 1], history!.Shifts.Select(s => s.DurationMinutes!.Value));
+        // What the employee sees adds up: the total is exactly the sum of the rows.
+        Assert.Equal(history.Shifts.Sum(s => s.DurationMinutes), history.TotalMinutes);
+        Assert.Equal(4, Assert.Single(history.Days).TotalMinutes);
     }
 
     [Fact] // 2 (D-10, EC-5)

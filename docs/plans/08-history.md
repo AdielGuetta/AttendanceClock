@@ -51,6 +51,9 @@ Manager views of all employees (manager step), CSV export (nice-to-have N1), ove
   `Time/ZurichTime.cs` (`ToZurichDate`, `StartOfDay`). `ShiftDto` now also carries `zurichDate`.
 - **10 history tests (12 cases) pass, 43/43 overall.**
 - **Found during the live check:** totals originally added each shift's *rounded-down* minutes, so many short shifts could
-  quietly lose time. Changed to add exact durations, then round once; new test 1b (3 × 1 min 40 s = 5 min, not 3).
+  quietly lose time (up to 59 s per shift, never hours). First fix: add exact durations, then round once. That was correct,
+  but **the user pointed out** that the rows then wouldn't visibly add up to the total, which looks wrong to an employee.
+  Options weighed: (A) nearest-minute per shift with totals = sum of rows, (B) show seconds everywhere, (C) a footnote.
+  **Chosen: A**, which is fair in both directions and always adds up. Test 1b checks 1:40 → 2, 1:20 → 1, 0:30 → 1, total 4.
 - Live run (real timeapi.io): `GET /api/shifts/mine` with no dates → `from 2026-11-16, to 2026-11-22` (this Zurich week),
   listing yossi's shift from plan 07. A reversed range → `400 INVALID_RANGE`.
