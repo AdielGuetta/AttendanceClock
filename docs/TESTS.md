@@ -3,7 +3,7 @@
 The assignment asks us to **identify edge cases and complex scenarios and handle them**. This document maps each edge case
 (IDs from [PRD §6](PRD.md)) to **how it's handled** and **which automated test proves it**.
 
-**Current result: 31 / 31 tests passing.**
+**Current result: 43 / 43 test cases passing** (41 test methods; one runs with 3 inputs).
 
 ```bash
 docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"
@@ -18,8 +18,9 @@ docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"
 | **Trusted clock unit tests** (10) | `Tests/Time/FallbackTrustedClockTests.cs` | A **fake HTTP handler** replaces the internet and returns any answer we want: correct, broken, slow, lying | Simulate outages and DST nights without waiting for them; no real network, so fast and repeatable |
 | **Login integration tests** (9) | `Tests/Auth/AuthTests.cs` | The **real app** runs in memory (`ApiFactory`) against the real SQL Server, in a **separate database** (`AttendanceClock_Tests`) reset every run | Tests the real security behaviour end to end; development data is never touched |
 | **Punch integration tests** (12) | `Tests/Punches/PunchTests.cs` | Real app + test DB, with the time APIs swapped for a **fake clock** we control ("it's now 22:00", "the service is down") | Lets us "travel" to a DST night or a 15-hour shift; the fake exists **only in tests** |
+| **History integration tests** (10 methods, 12 cases) | `Tests/History/HistoryTests.cs` | Real app + test DB + fake clock; shifts on many days inserted directly | Day boundaries, DST days, totals, privacy |
 
-The punch and login test classes share the test database, so they never run in parallel (`DatabaseCollection`).
+The login, punch and history test classes share the test database, so they never run in parallel (`DatabaseCollection`).
 
 ---
 
@@ -56,6 +57,17 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 | EC-15 | Time fetched, then the **DB write fails** | One `SaveChanges` call = one transaction, so nothing is half-saved; the user retries | 🟡 by design |
 | — | **Punching without logging in** | `401` | ✅ Punch #9 |
 
+### History and totals
+| ID | Edge case | Handling | Proof |
+|---|---|---|---|
+| D-10 / EC-5 | **Overnight shift** in history | Counted once, on its start date | ✅ History #2 |
+| EC-6 | Shift starting **00:30 on a DST day** (a 23-hour day) | Day boundaries computed from Zurich rules → right day | ✅ History #3 |
+| — | Shift starting **just before midnight** of the range | Not included (belongs to the previous day) | ✅ History #4 |
+| — | **Many short shifts** | Exact durations added, then rounded once (no lost minutes) | ✅ History #1b |
+| — | **Open shift** | Shown separately, not counted in totals | ✅ History #6 |
+| — | **Someone else's shifts** | Never returned: employee id from the token, not the URL | ✅ History #5 |
+| — | **Huge or reversed date range** | `400 INVALID_RANGE` (max 93 days) | ✅ History #8 |
+
 ### Login and security
 | ID | Edge case | Handling | Proof |
 |---|---|---|---|
@@ -77,7 +89,7 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 
 ---
 
-## All 31 tests
+## All tests
 
 ### Trusted clock: `FallbackTrustedClockTests` (10)
 | # | Test | Proves |
@@ -121,6 +133,20 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 | 10 | 15-hour shift → recorded and flagged `TooLong` | F7 |
 | 11 | Clock Out time before Clock In → rejected, shift stays open | EC-9 |
 | 12 | Status while on shift shows since when | F3 |
+
+### History: `HistoryTests` (10 methods, 12 cases)
+| # | Test | Proves |
+|---|---|---|
+| 1 | Daily and range totals add up | 480 + 510 = 990 min |
+| 1b | Totals add exact durations before rounding | 3 × 1 min 40 s = 5 min, not 3 |
+| 2 | Overnight shift counts only on its start date | D-10 |
+| 3 | Shift at 00:30 on the DST day lands on that day | EC-6, Zurich day boundaries |
+| 4 | Shifts outside the range are not included | Boundary just before midnight |
+| 5 | Another employee's shifts are never included | Privacy |
+| 6 | Open shift returned separately, not counted | |
+| 7 | No dates → this week, from the trusted clock | Mon–Sun in Zurich |
+| 8 | Invalid range refused (3 cases: reversed, > 93 days, one date only) | `400 INVALID_RANGE` |
+| 9 | History requires login | 401 |
 
 ---
 

@@ -62,9 +62,10 @@ backend/
     Controllers/                     # TimeController (GET /api/time/now)
     Auth/                            # login: AuthController, TokenService (JWT), AuthOptions
     Punches/                         # Clock In/Out/status: ShiftService (rules) + PunchesController (thin)
+    History/                         # GET /api/shifts/mine: HistoryService (Zurich day boundaries, exact totals) + ShiftsController
     Common/ApiProblem.cs             # ProblemDetails + stable error "code"
     Data/DevDataSeeder.cs            # demo accounts (Development only)
-  AttendanceClock.Tests/             # xUnit. Time/: fake HTTP handler. Auth/, Punches/: real app in memory (ApiFactory) + test DB.
+  AttendanceClock.Tests/             # xUnit. Time/: fake HTTP handler. Auth/, Punches/, History/: real app in memory (ApiFactory) + test DB.
                                      # Punches/ swaps ITrustedClock for FakeTrustedClock (tests only!). DB test classes use
                                      # [Collection(DatabaseCollection.Name)] so they never run in parallel.
 docs/PRD.md                          # requirements and decisions

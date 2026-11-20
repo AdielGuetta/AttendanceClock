@@ -1,10 +1,15 @@
 using AttendanceClock.Api.Domain;
+using AttendanceClock.Api.Time;
 
 namespace AttendanceClock.Api.Punches;
 
-/// <summary>A shift as the UI sees it. Times carry the Zurich offset, e.g. "2026-11-20T08:02:11+01:00".</summary>
+/// <summary>
+/// A shift as the UI sees it. Times carry the Zurich offset, e.g. "2026-11-20T08:02:11+01:00".
+/// <see cref="ZurichDate"/> is the calendar day the shift belongs to: the Zurich date of its Clock In (PRD D-10).
+/// </summary>
 public sealed record ShiftDto(
     long Id,
+    DateOnly ZurichDate,
     DateTimeOffset ClockIn,
     string ClockInSource,
     DateTimeOffset? ClockOut,
@@ -14,6 +19,7 @@ public sealed record ShiftDto(
 {
     public static ShiftDto From(Shift s) => new(
         s.Id,
+        ZurichTime.ToZurichDate(s.ClockIn),
         s.ClockIn,
         s.ClockInSource,
         s.ClockOut,

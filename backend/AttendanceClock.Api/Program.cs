@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using AttendanceClock.Api.Auth;
 using AttendanceClock.Api.Data;
 using AttendanceClock.Api.Domain;
+using AttendanceClock.Api.History;
 using AttendanceClock.Api.Punches;
 using AttendanceClock.Api.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -31,6 +32,7 @@ builder.Services.AddTransient<ITrustedClock, FallbackTrustedClock>();
 
 // ── Clock In / Clock Out (Plan 07) ────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<ShiftService>();
+builder.Services.AddScoped<HistoryService>(); // Plan 08: my shifts + totals
 
 // ── Login (Plan 06, PRD F1) ───────────────────────────────────────────────────────────────────────
 builder.Services.AddOptions<AuthOptions>()

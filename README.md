@@ -55,6 +55,9 @@ contains a token; send it as `Authorization: Bearer <token>`, e.g. to `GET /api/
 Punch (with the token): `POST /api/punches/clock-in`, `POST /api/punches/clock-out`, `GET /api/punches/status`.
 No body is sent: the server takes the time from the external time API.
 
+History (with the token): `GET /api/shifts/mine?from=2026-11-16&to=2026-11-22` (Zurich dates; no dates = this week),
+with daily and range totals.
+
 **Database setup is automatic:** SQL Server runs in a container, and the server creates and upgrades the tables on
 startup (EF Core migrations). There are no manual steps.
 
@@ -127,7 +130,8 @@ Your computer (Windows / macOS / Linux)
 | Trusted clock: external time, backup, validation, 10 tests | ✅ |
 | Login and roles: JWT, hashed passwords, brute-force limit, 9 tests | ✅ |
 | Clock In / Clock Out / status: race-safe, DST-safe, 12 tests | ✅ |
-| Shift history and totals | ⏭️ next |
+| Shift history and totals: DST-safe days, exact totals, 10 tests | ✅ |
+| React UI | ⏭️ next |
 | React UI | ⏳ |
 | Manager dashboard and corrections | ⏳ |
 

@@ -135,6 +135,8 @@ The UI shows a ticking Zurich clock for convenience. It's seeded from `GET /api/
 - `GET /api/shifts/mine?from=&to=`: shifts in a date range (default: current week), with daily totals and a weekly total.
 - A shift belongs to the **Zurich calendar date of its clock-in** (D-10; see EC-5).
 - Flagged shifts are visibly marked, with the reason.
+- ✅ Implemented in [Plan 08](plans/08-history.md): day boundaries use Zurich's official rules (DST days are 23/25 h);
+  totals add exact durations before rounding; the open shift is returned separately and not counted; max range 93 days.
 
 ### F5 Manager dashboard
 - "On shift now": employees with an open shift and how long it's been open.

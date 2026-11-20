@@ -31,6 +31,20 @@ public static class ZurichTime
                 $"{sourceName}: offset {value.Offset} doesn't match Zurich rules for {value.UtcDateTime:u} (expected {expected}).");
     }
 
+    /// <summary>The Zurich calendar date of an instant (PRD D-10: a shift belongs to the date of its Clock In).</summary>
+    public static DateOnly ToZurichDate(DateTimeOffset instant) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, Zone).DateTime);
+
+    /// <summary>
+    /// The exact instant of midnight at the start of a Zurich calendar day, using the official rules,
+    /// so DST days (23 or 25 hours long) get the right boundaries. Midnight is never inside the DST gap (02:00–03:00).
+    /// </summary>
+    public static DateTimeOffset StartOfDay(DateOnly date)
+    {
+        var localMidnight = date.ToDateTime(TimeOnly.MinValue);
+        return new DateTimeOffset(localMidnight, Zone.GetUtcOffset(localMidnight));
+    }
+
     /// <summary>Parses a local date-time with NO offset, e.g. "2026-11-19T20:15:40.468801".</summary>
     public static DateTime ParseLocal(string text, string sourceName)
     {

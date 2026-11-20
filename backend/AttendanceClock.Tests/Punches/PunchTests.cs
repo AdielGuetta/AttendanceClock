@@ -49,6 +49,22 @@ public sealed class PunchFixture : IDisposable
         return (client, employee.Id);
     }
 
+    /// <summary>Puts a shift straight into the test database (for history tests that need shifts on many days).</summary>
+    public async Task AddShiftAsync(int employeeId, string clockIn, string? clockOut = null)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Shifts.Add(new Shift
+        {
+            EmployeeId = employeeId,
+            ClockIn = DateTimeOffset.Parse(clockIn),
+            ClockInSource = "test-data",
+            ClockOut = clockOut is null ? null : DateTimeOffset.Parse(clockOut),
+            ClockOutSource = clockOut is null ? null : "test-data",
+        });
+        await db.SaveChangesAsync();
+    }
+
     public async Task<int> CountShiftsAsync(int employeeId)
     {
         using var scope = Factory.Services.CreateScope();

@@ -30,6 +30,9 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 17 | **`/status` doesn't call the time API** | The UI checks status often; external calls there would worsen the rush risk (EC-17). Elapsed time on screen is cosmetic; recorded times always come from the API. |
 | 18 | **Clock In must be after the previous Clock Out; Clock Out after Clock In** | Two providers that disagree by a second can't create overlapping or negative shifts. The punch is refused with `503 TIME_SOURCE_INCONSISTENT` instead. |
 | 19 | **Shifts over 14 h are recorded and flagged `TooLong`**, not blocked | The record stays honest; the manager reviews it (F7). |
+| 20 | **History day boundaries use Zurich's official rules**; a shift belongs to its Clock In date (D-10) | DST days are 23 or 25 hours long. An overnight shift is counted once, on its start date. |
+| 21 | **Totals add exact durations, then round once** | Rounding each shift first quietly loses time across many short shifts. Found during the live check. |
+| 22 | **History: only your own shifts (id from the token), max 93 days, default = current Zurich week via the trusted clock** | No peeking at others' data via the URL; bounded queries; "today" comes from a trusted source. |
 
 ## Edge cases
 
@@ -46,6 +49,8 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | Clock Out before Clock In (EC-9) | Rejected in code (`503 TIME_SOURCE_INCONSISTENT`) + DB check constraint | ✅ tested |
 | Time API down during a punch | `503`, nothing saved | ✅ tested |
 | Shift over 14 h (F7) | Saved, flagged `TooLong` | ✅ tested |
+| History: overnight shift / shift at 00:30 on a DST day | Counted on its start date; boundaries from Zurich rules | ✅ tested |
+| History: another employee's shifts | Never returned (id from the token) | ✅ tested |
 | Expired / tampered / missing login token (EC-14) | 401; the UI will send the user back to login | ✅ API side built + tested |
 | Deactivated employee tries to log in | Same generic 401 as a wrong password | ✅ tested |
 | Manager corrections, deactivating an employee mid-shift | See PRD §6 | (planned) |
