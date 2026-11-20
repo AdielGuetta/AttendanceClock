@@ -3,7 +3,7 @@
 The assignment asks us to **identify edge cases and complex scenarios and handle them**. This document maps each edge case
 (IDs from [PRD §6](PRD.md)) to **how it's handled** and **which automated test proves it**.
 
-**Current result: 43 / 43 backend test cases + 10 / 10 frontend tests passing.**
+**Current result: 58 / 58 backend test cases + 10 / 10 frontend tests passing.**
 
 ```bash
 docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"              # backend
@@ -20,8 +20,9 @@ docker compose run --rm --no-deps web sh -c "npm install && npx vitest run"     
 | **Login integration tests** (9) | `Tests/Auth/AuthTests.cs` | The **real app** runs in memory (`ApiFactory`) against the real SQL Server, in a **separate database** (`AttendanceClock_Tests`) reset every run | Tests the real security behaviour end to end; development data is never touched |
 | **Punch integration tests** (12) | `Tests/Punches/PunchTests.cs` | Real app + test DB, with the time APIs swapped for a **fake clock** we control ("it's now 22:00", "the service is down") | Lets us "travel" to a DST night or a 15-hour shift; the fake exists **only in tests** |
 | **History integration tests** (10 methods, 12 cases) | `Tests/History/HistoryTests.cs` | Real app + test DB + fake clock; shifts on many days inserted directly | Day boundaries, DST days, totals, privacy |
+| **Manager integration tests** (13 methods, 15 cases) | `Tests/Admin/AdminTests.cs` | Real app + test DB + fake clock, logged in as a manager | Permissions, corrections, audit trail, version stamps, DST input |
 
-The login, punch and history test classes share the test database, so they never run in parallel (`DatabaseCollection`).
+The login, punch, history and manager test classes share the test database, so they never run in parallel (`DatabaseCollection`).
 
 ---
 
@@ -80,13 +81,20 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 | — | **Password guessing** (brute force) | 5 attempts / min / IP → `429 TOO_MANY_ATTEMPTS` | ✅ Auth #8 |
 | — | Passwords readable from the DB | Stored only as salted PBKDF2 hashes | ✅ Auth #9 |
 
-### Planned (manager step)
-| ID | Edge case | Status |
-|---|---|---|
-| EC-12 | Employee deactivated while on shift | ⏳ |
-| EC-13 | Manager correction creates an overlap or a future time | ⏳ |
-| EC-16 | Manager edits their own shift | ⏳ |
-| EC-2 (edit) | Manager edits a shift while the employee clocks out (`rowversion`) | 🔒 in place, ⏳ test with the correction feature |
+### Manager corrections
+| ID | Edge case | Handling | Proof |
+|---|---|---|---|
+| — | **Employee calls a manager endpoint** | `403` (server-side role check) | ✅ Admin #1 |
+| EC-4 / F7 | **Forgotten open shift** | Flagged "ForgotClockOut" after 14 h (computed against the trusted clock); manager closes it → employee can clock in again | ✅ Admin #2, #5 |
+| F6 | **A correction must be explained and visible** | Reason ≥ 5 chars; source `ManualCorrection`; flag `Corrected`; one audit row per changed field, stamped by the trusted clock | ✅ Admin #4, #6, #12 |
+| EC-13 | Correction puts **Clock Out before Clock In** | `400` | ✅ Admin #7 |
+| EC-13 | Correction **in the future** | `400 TIME_IN_FUTURE` (trusted "now") | ✅ Admin #8 |
+| EC-13 | Correction **overlaps another shift** | `409 OVERLAPS_ANOTHER_SHIFT` | ✅ Admin #9 |
+| EC-2 (edit) | **Shift changed while the manager was editing** | Version stamp → `409 SHIFT_MODIFIED` | ✅ Admin #10 · 🔒 rowversion |
+| EC-7 | Manager types **02:30 on the fall-back night** (happens twice) | `400 AMBIGUOUS_TIME`; with an explicit offset it's accepted, and the duration is correct | ✅ Admin #11 |
+| EC-6 | Manager types **02:30 on the spring-forward night** (doesn't exist) | `400 INVALID_LOCAL_TIME` | ✅ Admin #11b |
+| EC-16 | Manager corrects **their own** shift | Allowed, audited and flagged like any other | ⚠️ no four-eyes rule |
+| EC-12 | Employee **deactivated while on shift** | No employee-management screen yet | ⏳ not built |
 
 ---
 
@@ -151,6 +159,23 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 
 ---
 
+### Manager: `AdminTests` (13 methods, 15 cases)
+| # | Test | Proves |
+|---|---|---|
+| 1 | Employees can't use manager endpoints | 403 |
+| 2 | On-shift list shows open shifts and flags forgotten ones | F5, F7 |
+| 3 | Shift list filters by employee and flagged-only | F5 |
+| 4 | Correcting a Clock Out → labelled, flagged, audited (old/new/reason/manager/trusted time) | F6 |
+| 5 | Closing a forgotten shift lets the employee clock in again; audit shows "(open)" | EC-4 |
+| 6 | Reason required (3 cases: missing, empty, too short) | F6 |
+| 7 | Clock Out must stay after Clock In | |
+| 8 | Times in the future are refused | EC-13 |
+| 9 | A correction can't overlap another shift | EC-13 |
+| 10 | A stale version stamp is refused | Optimistic concurrency |
+| 11 | Ambiguous fall-back 02:30 needs an offset; with +01:00 → 330 min | EC-7 |
+| 11b | Non-existent spring-forward 02:30 is refused | EC-6 |
+| 12 | Audit history lists every change in order | D-11 |
+
 ### Frontend: `frontend/src/time.test.ts` (Vitest, 10)
 | # | Test | Proves |
 |---|---|---|
@@ -171,3 +196,5 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 - **Live runs** against the real time API: `/api/time/now` (plan 05), real logins (plan 06), and a real clock-in/out cycle (plan 07).
 - **Browser walkthrough of the UI (plan 09):** wrong password, login, Clock In, refresh, a **stale tab after a second
   device clocked out** (409 → message + self-refresh), My week, phone-size layout, log out.
+- **Browser walkthrough of the manager screens (plan 10):** forgotten shift flagged → closed with a reason → history entry →
+  future time refused → the employee sees "Corrected by manager" and has no Team tab.

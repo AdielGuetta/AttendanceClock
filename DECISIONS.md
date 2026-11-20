@@ -39,6 +39,12 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 26 | **No router or UI library: three screens, a tab switch and plain CSS** | Less to install, explain and maintain for a small app. |
 | 27 | **Login badge kept in `localStorage`** | Survives a refresh. Trade-off: readable by scripts if the page had an XSS hole. Mitigated: React escapes all output, no raw HTML, 60-minute expiry. |
 | 28 | **App on port 5174, not Vite's default 5173** | During testing, another local Vite project was on 5173 and the browser showed the *wrong app*. Moved ours rather than stopping the user's other project. |
+| 29 | **Manager corrections: reason required, labelled `ManualCorrection`, shift flagged `Corrected`** (F6) | The only non-API times in the system, so each one is explained and visible: the "external time" promise stays honest. |
+| 30 | **Append-only `ShiftAudits` table**: who, when (trusted clock), field, old → new, reason (D-11) | A permanent, attributable history. Rows are never updated or deleted; no cascade delete. |
+| 31 | **Version stamp on edits** (`rowversion`, sent back by the UI) | If the employee clocked out while the manager was editing, the save is refused (`409 SHIFT_MODIFIED`) instead of silently overwriting. |
+| 32 | **Managers type Zurich wall time; DST is resolved by the server** | 02:30 on the fall-back night is ambiguous → the UI asks "the first or the second 02:30?"; 02:30 on the spring-forward night doesn't exist → refused. |
+| 33 | **"Forgot to clock out" is computed on read** (open > 14 h, against the trusted clock), not stored | It changes with time; storing it would go stale. If the time service is down, lists still load, just without that flag. |
+| 34 | **Manager-only endpoints enforced on the server** (`[Authorize(Roles = "Manager")]` → 403); the Team tab is just a convenience | The UI never decides permissions. |
 
 ## Edge cases
 
@@ -62,7 +68,13 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | UI: login badge expires mid-session | Any `401` → back to the login screen with a message | ✅ built (not yet tested automatically) |
 | Expired / tampered / missing login token (EC-14) | 401; the UI will send the user back to login | ✅ API side built + tested |
 | Deactivated employee tries to log in | Same generic 401 as a wrong password | ✅ tested |
-| Manager corrections, deactivating an employee mid-shift | See PRD §6 | (planned) |
+| Forgotten open shift (EC-4) | Flagged in "On shift now"; manager closes it with a reason → employee can clock in again | ✅ tested + browser walkthrough |
+| Correction overlaps another shift / is in the future / out before in (EC-13) | `409` / `400` with a clear code | ✅ tested |
+| Shift changed while a manager edits it | `409 SHIFT_MODIFIED`, reload first | ✅ tested |
+| Manager types 02:30 on a DST night | Fall back: "which one?" (offset required). Spring forward: "doesn't exist" | ✅ tested |
+| Manager corrects their own shift (EC-16) | Allowed, audited and flagged like any correction | ⚠️ no four-eyes rule (known limitation) |
+| Employee calls manager endpoints | `403` | ✅ tested |
+| Deactivating an employee mid-shift (EC-12) | Not built (no employee management UI) | ⏳ not done |
 
 ## What I chose not to do
 - **No fallback to the server clock**, even as a last resort (it would break the core rule silently).
@@ -81,6 +93,9 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 - The rate limit is per IP and in memory, so it resets on restart and isn't shared across multiple servers.
 - The UI runs on the Vite **dev server**; a production setup would build static files and serve them (e.g. from the API or a CDN).
 - No automated UI (end-to-end) tests yet: the screens were verified by a manual browser walkthrough, plus unit tests for the formatting.
+- **No employee management screen**: employees are seeded; creating, deactivating or resetting passwords isn't built (EC-12 open).
+- **No four-eyes rule**: a manager can correct their own shift (audited and flagged, but not approved by someone else).
+- No CSV/payroll export; the shift list has no paging (one week at a time, max 93 days).
 
 ## Working with Claude Code
 - Rules for the AI live in [CLAUDE.md](CLAUDE.md); each big step starts with a plan in [docs/plans/](docs/plans/).
@@ -91,4 +106,6 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
   - a PowerShell 5.1 file edit garbled non-ASCII characters (wrong default encoding). Caught, fixed and added to CLAUDE.md;
   - its fix for the history rounding bug was mathematically right but made the rows not visibly add up to the total.
     I pushed back from the user's point of view, and we switched to nearest-minute rounding (DECISIONS #21);
-  - in the UI walkthrough, a stale-tab message said "Refresh to see your status" although the screen refreshes itself. Reworded.
+  - in the UI walkthrough, a stale-tab message said "Refresh to see your status" although the screen refreshes itself. Reworded;
+  - its merge procedure (`git switch main` before merging) briefly deleted the `frontend/` folder, so Vite restarted without
+    its config and the app became unreachable. Diagnosed from the container log, fixed, and the procedure changed in CLAUDE.md.

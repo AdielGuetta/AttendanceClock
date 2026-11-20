@@ -4,8 +4,9 @@ import { clearSession, getSession, type Session } from "./session";
 import LoginScreen from "./screens/LoginScreen";
 import ClockScreen from "./screens/ClockScreen";
 import WeekScreen from "./screens/WeekScreen";
+import TeamScreen from "./screens/TeamScreen";
 
-type Tab = "clock" | "week";
+type Tab = "clock" | "week" | "team";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(() => getSession());
@@ -25,6 +26,8 @@ export default function App() {
   }
 
   const logout = () => { clearSession(); setSession(null); };
+  // The tab is only a convenience: the server refuses manager endpoints to non-managers anyway (403).
+  const isManager = session.employee.role === "Manager";
 
   return (
     <div className="app">
@@ -33,6 +36,7 @@ export default function App() {
         <nav className="tabs" aria-label="Main">
           <button className={tab === "clock" ? "tab active" : "tab"} onClick={() => setTab("clock")}>Clock</button>
           <button className={tab === "week" ? "tab active" : "tab"} onClick={() => setTab("week")}>My week</button>
+          {isManager && <button className={tab === "team" ? "tab active" : "tab"} onClick={() => setTab("team")}>Team</button>}
         </nav>
         <div className="user">
           <span className="user-name">{session.employee.displayName}</span>
@@ -40,7 +44,7 @@ export default function App() {
         </div>
       </header>
       <main className="content">
-        {tab === "clock" ? <ClockScreen /> : <WeekScreen />}
+        {tab === "clock" ? <ClockScreen /> : tab === "week" ? <WeekScreen /> : <TeamScreen />}
       </main>
     </div>
   );

@@ -64,10 +64,12 @@ backend/
     Controllers/                     # TimeController (GET /api/time/now)
     Auth/                            # login: AuthController, TokenService (JWT), AuthOptions
     Punches/                         # Clock In/Out/status: ShiftService (rules) + PunchesController (thin)
-    History/                         # GET /api/shifts/mine: HistoryService (Zurich day boundaries, exact totals) + ShiftsController
+    History/                         # GET /api/shifts/mine: HistoryService (Zurich day boundaries, nearest-minute totals) + ShiftsController
+    Admin/                           # manager-only /api/admin/*: AdminService (on-shift, shifts, corrections + audit) + AdminController
+    Domain/ShiftAudit.cs             # append-only audit rows for manager corrections
     Common/ApiProblem.cs             # ProblemDetails + stable error "code"
     Data/DevDataSeeder.cs            # demo accounts (Development only)
-  AttendanceClock.Tests/             # xUnit. Time/: fake HTTP handler. Auth/, Punches/, History/: real app in memory (ApiFactory) + test DB.
+  AttendanceClock.Tests/             # xUnit. Time/: fake HTTP handler. Auth/, Punches/, History/, Admin/: real app in memory (ApiFactory) + test DB.
                                      # Punches/ swaps ITrustedClock for FakeTrustedClock (tests only!). DB test classes use
                                      # [Collection(DatabaseCollection.Name)] so they never run in parallel.
 frontend/                            # React 19 + Vite 8 + TypeScript 5.9 (container attendance-web, http://localhost:5174)
@@ -76,7 +78,7 @@ frontend/                            # React 19 + Vite 8 + TypeScript 5.9 (conta
   src/session.ts                     # login badge in localStorage
   src/time.ts (+ time.test.ts)       # Zurich display helpers: read wall time from the server's ISO string, CET/CEST
   src/useZurichClock.ts              # cosmetic live clock: server time + performance.now()
-  src/screens/                       # LoginScreen, ClockScreen (big button), WeekScreen
+  src/screens/                       # LoginScreen, ClockScreen (big button), WeekScreen, TeamScreen + EditShiftDialog (managers)
 docs/PRD.md                          # requirements and decisions
 docs/TECH-STACK.md                   # pros/cons + user impact per component (update when a component is added or changed)
 docs/TECH-STACK.pdf                  # visual version, generated from docs/visual/tech-stack.html with headless Edge:
@@ -98,6 +100,10 @@ docker-compose.yml
 
 ## Git workflow
 - One branch per step (`feature/…`, `docs/…`, `setup/…`), merged into `main` with a fast-forward once it works.
+- **Merge without leaving the branch:** `git branch -f main HEAD && git switch main` (fast-forward only; check first with
+  `git merge-base --is-ancestor main HEAD`). Don't `git switch main` *before* merging: that briefly deletes files that
+  only exist on the branch, and the running watchers (Vite, dotnet watch) restart without them. This happened once:
+  Vite came back on its default port 5173 with no config, and `docker compose restart web` was needed.
 - Commit messages: conventional style (`feat:`, `docs:`, `fix:`), a short body explaining why, and the Co-Authored-By trailer.
 - Never push to GitHub, or merge, without the user's approval.
 

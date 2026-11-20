@@ -39,7 +39,7 @@ The first start takes a few minutes (it downloads SQL Server, the .NET SDK and N
 
 | URL | What you'll see |
 |---|---|
-| **http://localhost:5174** | **The app**: log in, Clock In / Clock Out, My week |
+| **http://localhost:5174** | **The app**: log in, Clock In / Clock Out, My week; managers also get a **Team** tab |
 | http://localhost:5080/health | `Healthy`: the server is up and can reach the database |
 | http://localhost:5080/api/time/now | The current Zurich time from the external time API |
 
@@ -61,6 +61,9 @@ No body is sent: the server takes the time from the external time API.
 History (with the token): `GET /api/shifts/mine?from=2026-11-16&to=2026-11-22` (Zurich dates; no dates = this week),
 with daily and range totals.
 
+Manager only (log in as `manager`): `GET /api/admin/on-shift`, `GET /api/admin/shifts?from=&to=&employeeId=&flaggedOnly=`,
+`PATCH /api/admin/shifts/{id}` (body: `clockIn`/`clockOut` as Zurich time, `reason`, `rowVersion`), `GET /api/admin/shifts/{id}/audit`.
+
 **Database setup is automatic:** SQL Server runs in a container, and the server creates and upgrades the tables on
 startup (EF Core migrations). There are no manual steps.
 
@@ -68,7 +71,7 @@ Stop with `docker compose down` (data is kept), or `docker compose down -v` to a
 
 ### Run the tests
 ```bash
-docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"   # backend: 43 tests
+docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"   # backend: 58 tests
 docker compose run --rm --no-deps web sh -c "npm install && npx vitest run"   # frontend: 10 tests
 ```
 
@@ -137,7 +140,8 @@ Your computer (Windows / macOS / Linux)
 | Clock In / Clock Out / status: race-safe, DST-safe, 12 tests | ✅ |
 | Shift history and totals: DST-safe days, nearest-minute totals that add up, 10 tests | ✅ |
 | React UI (employee): login, Clock In/Out, My week, phone-friendly, 10 tests | ✅ |
-| Manager dashboard and corrections | ⏭️ next |
+| Manager: who's on shift, all shifts, corrections with reason + audit trail, 15 tests | ✅ |
+| Final polish: fresh-clone test, docs review | ⏭️ next |
 
 ## Documentation
 - [docs/PRD.md](docs/PRD.md): requirements, edge cases and design

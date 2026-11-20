@@ -35,11 +35,11 @@ public sealed class PunchFixture : IDisposable
     }
 
     /// <summary>Creates a fresh employee (so tests don't affect each other) and an HTTP client logged in as them.</summary>
-    public async Task<(HttpClient Client, int EmployeeId)> NewEmployeeClientAsync()
+    public async Task<(HttpClient Client, int EmployeeId)> NewEmployeeClientAsync(EmployeeRole role = EmployeeRole.Employee)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var employee = new Employee { UserName = "emp-" + Guid.NewGuid().ToString("N")[..12], DisplayName = "Test Employee" };
+        var employee = new Employee { UserName = "emp-" + Guid.NewGuid().ToString("N")[..12], DisplayName = "Test " + role, Role = role };
         db.Employees.Add(employee);
         await db.SaveChangesAsync();
 
@@ -50,19 +50,21 @@ public sealed class PunchFixture : IDisposable
     }
 
     /// <summary>Puts a shift straight into the test database (for history tests that need shifts on many days).</summary>
-    public async Task AddShiftAsync(int employeeId, string clockIn, string? clockOut = null)
+    public async Task<long> AddShiftAsync(int employeeId, string clockIn, string? clockOut = null)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Shifts.Add(new Shift
+        var shift = new Shift
         {
             EmployeeId = employeeId,
             ClockIn = DateTimeOffset.Parse(clockIn),
             ClockInSource = "test-data",
             ClockOut = clockOut is null ? null : DateTimeOffset.Parse(clockOut),
             ClockOutSource = clockOut is null ? null : "test-data",
-        });
+        };
+        db.Shifts.Add(shift);
         await db.SaveChangesAsync();
+        return shift.Id;
     }
 
     public async Task<int> CountShiftsAsync(int employeeId)

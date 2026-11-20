@@ -141,7 +141,8 @@ The UI shows a ticking Zurich clock for convenience. It's seeded from `GET /api/
 
 ### F5 Manager dashboard
 - "On shift now": employees with an open shift and how long it's been open.
-- All shifts: filter by employee, date range, flagged only; pagination.
+- All shifts: filter by employee, date range, flagged only. *(No pagination: a week at a time, max 93 days per request.)*
+- ✅ Implemented in [Plan 10](plans/10-manager.md) (`/api/admin/on-shift`, `/api/admin/shifts`, manager-only Team tab).
 
 ### F6 Manager corrections
 - A manager can edit clock-in / clock-out times of a shift or close an open shift.
@@ -149,6 +150,9 @@ The UI shows a ticking Zurich clock for convenience. It's seeded from `GET /api/
 - Corrected punches get `TimeSource = ManualCorrection`. They're a business override, explicitly labelled, so the "all times come from the API" guarantee stays honest: every non-API time is visible and attributable.
 - The correction's *own* timestamp (when the edit happened) does come from the trusted clock.
 - Validation: out > in; no overlap with the employee's other shifts; not in the future.
+- ✅ Implemented in [Plan 10](plans/10-manager.md), plus: the version stamp (`rowversion`) refuses edits to a shift that
+  changed meanwhile (`409 SHIFT_MODIFIED`), and managers type Zurich wall time. On DST nights an ambiguous time (fall back)
+  needs an explicit offset, and a non-existent one (spring forward) is refused.
 
 ### F7 Flags
 A shift is flagged automatically when:
@@ -176,9 +180,9 @@ Flags never block the employee; they surface in the manager's view.
 | **EC-10** | Employee's browser is in a different time zone, or their PC clock is wrong | Irrelevant to recording (server-side time). Display is always Zurich, labelled. |
 | **EC-11** | Very short accidental shift (seconds) | Recorded honestly. (N2 "undo within 2 min" if time allows.) |
 | **EC-12** | Employee deactivated while on shift | Deactivation is blocked until the open shift is closed, or the manager closes it as part of deactivating (audited). |
-| **EC-13** | Manager correction creates an overlap or a future time | Rejected by validation. |
+| **EC-13** | Manager correction creates an overlap or a future time | Rejected by validation. ✅ Tested (Plan 10). |
 | **EC-14** | Expired JWT mid-session | 401 → UI redirects to login, keeps nothing stale. |
-| **EC-15** | Punch request arrives, API call succeeds, DB write fails | Transaction; nothing is saved; the user gets an error and retries. The idempotency key makes the retry safe. |
+| **EC-15** | Punch request arrives, API call succeeds, DB write fails | Transaction; nothing is saved; the user gets an error and retries. The retry is safe: a repeated punch gets a `409` with the current state (the idempotency key was dropped in Plan 07). |
 | **EC-16** | A manager edits their own shift | Allowed but audited (and flagged `Corrected`). Noted as a known limitation: no four-eyes rule. |
 | **EC-17** | **Shift-start rush:** many employees punch in the same minute (e.g. 200 at 08:00) | The database copes easily (different rows, no blocking). The weak point is the **free time API**: one call per punch may hit its rate limits → slow answers or blocks → the flaky backup takes over → in the worst case, refused punches. **Known limitation for now.** Mitigation options: (a) share one fetched time among punches arriving within the same ~1 s (requests wait for one in-flight call instead of each calling); (b) a paid provider with an SLA; (c) a self-hosted NTP-synced time service. Not "cache for minutes", because each punch needs a fresh time. |
 

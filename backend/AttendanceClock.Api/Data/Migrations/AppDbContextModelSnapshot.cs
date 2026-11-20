@@ -118,6 +118,55 @@ namespace AttendanceClock.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AttendanceClock.Api.Domain.ShiftAudit", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ChangedByEmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Field")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("NewValue")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("OldValue")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("ShiftId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByEmployeeId");
+
+                    b.HasIndex("ShiftId", "ChangedAt");
+
+                    b.ToTable("ShiftAudits");
+                });
+
             modelBuilder.Entity("AttendanceClock.Api.Domain.Shift", b =>
                 {
                     b.HasOne("AttendanceClock.Api.Domain.Employee", "Employee")
@@ -127,6 +176,25 @@ namespace AttendanceClock.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("AttendanceClock.Api.Domain.ShiftAudit", b =>
+                {
+                    b.HasOne("AttendanceClock.Api.Domain.Employee", "ChangedBy")
+                        .WithMany()
+                        .HasForeignKey("ChangedByEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AttendanceClock.Api.Domain.Shift", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChangedBy");
+
+                    b.Navigation("Shift");
                 });
 
             modelBuilder.Entity("AttendanceClock.Api.Domain.Employee", b =>

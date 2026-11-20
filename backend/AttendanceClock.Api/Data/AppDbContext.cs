@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<ShiftAudit> ShiftAudits => Set<ShiftAudit>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

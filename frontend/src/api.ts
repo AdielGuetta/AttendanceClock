@@ -21,6 +21,13 @@ export type DayTotal = { date: string; totalMinutes: number; shiftCount: number 
 export type History = { from: string; to: string; totalMinutes: number; days: DayTotal[]; shifts: Shift[]; openShift: Shift | null };
 export type TimeNow = { zurichTime: string; source: string };
 
+// Manager views (Plan 10)
+export type AdminShift = Shift & { employeeId: number; employeeName: string; rowVersion: string };
+export type OnShift = { now: string | null; shifts: AdminShift[] };
+export type EmployeeSummary = { id: number; userName: string; displayName: string; role: string; isActive: boolean };
+export type ShiftAudit = { id: number; changedAt: string; changedBy: string; field: string; oldValue: string; newValue: string; reason: string };
+export type CorrectShift = { clockIn?: string; clockOut?: string; reason: string; rowVersion: string };
+
 export class ApiError extends Error {
   constructor(public status: number, public code: string | undefined, public title: string, public detail?: string) {
     super(detail ?? title);
@@ -69,4 +76,14 @@ export const api = {
   clockOut: () => request<Shift>("POST", "/api/punches/clock-out"),
   history: (from?: string, to?: string) =>
     request<History>("GET", from && to ? `/api/shifts/mine?from=${from}&to=${to}` : "/api/shifts/mine"),
+
+  admin: {
+    employees: () => request<EmployeeSummary[]>("GET", "/api/admin/employees"),
+    onShift: () => request<OnShift>("GET", "/api/admin/on-shift"),
+    shifts: (from: string, to: string, employeeId?: number, flaggedOnly?: boolean) =>
+      request<AdminShift[]>("GET", `/api/admin/shifts?from=${from}&to=${to}` +
+        (employeeId ? `&employeeId=${employeeId}` : "") + (flaggedOnly ? "&flaggedOnly=true" : "")),
+    audit: (shiftId: number) => request<ShiftAudit[]>("GET", `/api/admin/shifts/${shiftId}/audit`),
+    correct: (shiftId: number, body: CorrectShift) => request<AdminShift>("PATCH", `/api/admin/shifts/${shiftId}`, body),
+  },
 };

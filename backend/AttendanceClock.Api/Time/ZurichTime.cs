@@ -45,6 +45,34 @@ public static class ZurichTime
         return new DateTimeOffset(localMidnight, Zone.GetUtcOffset(localMidnight));
     }
 
+    public enum ManagerTimeProblem { None, Format, Ambiguous, DoesNotExist, OffsetNotZurich }
+
+    /// <summary>
+    /// Reads a time typed by a manager (Plan 10). Usually Zurich wall-clock time without an offset, e.g. "2026-11-20T17:00".
+    /// Uses Zurich's official rules to attach the right offset:
+    /// - on the "fall back" night, 02:00–02:59 happens twice → Ambiguous (the manager must add +02:00 or +01:00);
+    /// - on the "spring forward" night, 02:00–02:59 doesn't exist → DoesNotExist.
+    /// A time WITH an offset is accepted only if that offset is correct for Zurich at that instant.
+    /// </summary>
+    public static (DateTimeOffset Value, ManagerTimeProblem Problem) ParseManagerTime(string text)
+    {
+        text = text.Trim();
+        string[] withOffset = ["yyyy-MM-dd'T'HH:mmzzz", "yyyy-MM-dd'T'HH:mm:sszzz"];
+        if (DateTimeOffset.TryParseExact(text, withOffset, CultureInfo.InvariantCulture, DateTimeStyles.None, out var explicitTime))
+            return explicitTime.Offset == Zone.GetUtcOffset(explicitTime.UtcDateTime)
+                ? (explicitTime, ManagerTimeProblem.None)
+                : (default, ManagerTimeProblem.OffsetNotZurich);
+
+        string[] local = ["yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss"];
+        if (!DateTime.TryParseExact(text, local, CultureInfo.InvariantCulture, DateTimeStyles.None, out var wall))
+            return (default, ManagerTimeProblem.Format);
+        if (Zone.IsInvalidTime(wall))
+            return (default, ManagerTimeProblem.DoesNotExist);
+        if (Zone.IsAmbiguousTime(wall))
+            return (default, ManagerTimeProblem.Ambiguous);
+        return (new DateTimeOffset(wall, Zone.GetUtcOffset(wall)), ManagerTimeProblem.None);
+    }
+
     /// <summary>Parses a local date-time with NO offset, e.g. "2026-11-19T20:15:40.468801".</summary>
     public static DateTime ParseLocal(string text, string sourceName)
     {
