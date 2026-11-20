@@ -7,6 +7,9 @@ services:
   # 1) Database: Microsoft SQL Server 2022 (Developer edition, free for dev/test).
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    # SQL Server images exist only for Intel/AMD (x86-64). On Apple Silicon Macs, Docker Desktop runs this
+    # under emulation (Rosetta). Stating the platform makes that explicit and avoids "no matching manifest" errors.
+    platform: linux/amd64
     container_name: attendance-db
     environment:
       ACCEPT_EULA: "Y"

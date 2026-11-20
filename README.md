@@ -21,7 +21,13 @@ time we can't trust.
 
 ## Run it locally
 
-**You need:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running) and git.
+**You need:** git and Docker, running. This works the same on **Windows, macOS and Linux**:
+
+| OS | Install |
+|---|---|
+| Windows 10/11 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) (uses WSL 2 under the hood) |
+| macOS (Intel or Apple Silicon) | [Docker Desktop](https://www.docker.com/products/docker-desktop/). On Apple Silicon, SQL Server runs under emulation; see [notes](#macos-and-linux-notes) |
+| Linux | [Docker Engine](https://docs.docker.com/engine/install/) + the [Compose plugin](https://docs.docker.com/compose/install/linux/) (or Docker Desktop) |
 
 ```bash
 git clone https://github.com/AdielGuetta/AttendanceClock.git
@@ -56,9 +62,57 @@ Stop with `docker compose down` (data is kept), or `docker compose down -v` to a
 docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"
 ```
 
-### Without Docker *(alternative)*
-With the .NET 10 SDK and any SQL Server: set the connection string in
+### Without Docker *(alternative, any OS)*
+With the [.NET 10 SDK](https://dotnet.microsoft.com/download) and any reachable SQL Server: set the connection string in
 `backend/AttendanceClock.Api/appsettings.Development.json`, then run `dotnet run --project backend/AttendanceClock.Api`.
+*(On the original dev machine this wasn't possible: Windows Smart App Control blocks locally built programs. That's why
+Docker is the main path. See [DECISIONS.md](DECISIONS.md), #9.)*
+
+## How the Docker setup works
+
+`docker-compose.yml` describes two **containers**. A container is an isolated mini-computer (Linux inside) that holds
+one program plus everything it needs. They're started from **images**, ready-made templates downloaded once.
+
+```
+Your computer (Windows / macOS / Linux)
+│
+│  http://localhost:5080 ──────────────┐            localhost:1433 (optional: SSMS, Azure Data Studio…)
+│                                      ▼                 │
+│  ┌─ Docker ─────────────────────────────────────────────┼────────────────────┐
+│  │  attendance-api                                      ▼                    │
+│  │  image: .NET 10 SDK            ──── "db:1433" ───►  attendance-db         │
+│  │  runs: dotnet watch                                  image: SQL Server 2022│
+│  │  code: ./backend (live from your disk)               data: volume db-data │
+│  │  build output: volumes (api-bin, api-obj…)                                │
+│  └───────────────────────────────────────────────────────────────────────────┘
+```
+
+**What `docker compose up -d` does:**
+1. Downloads the two images, the first time only.
+2. Creates a private network, so the containers can reach each other **by name**: the API connects to `db`, not `localhost`.
+3. Starts **SQL Server** and waits until its health check passes (it really answers a query).
+4. Starts the **API** with `dotnet watch`, which builds the code, applies database migrations, adds the demo accounts,
+   and listens on port 5080.
+
+**Good to know**
+- **Edit code → the API reloads by itself.** Your `backend/` folder is shared live into the container.
+- **Data survives restarts.** It lives in the `db-data` *volume*, a storage area managed by Docker. Only
+  `docker compose down -v` deletes it.
+- **Ports** connect your computer to the containers: `5080` → the API, `1433` → SQL Server.
+- **Build output** (`bin/`, `obj/`) stays inside Docker volumes, so it never mixes with your own OS's files.
+- Useful commands: `docker compose ps` (status) · `docker logs attendance-api --tail 50` (API log) ·
+  `docker compose restart api`. Docker Desktop shows the same in its **Containers** tab.
+
+### macOS and Linux notes
+- **Same commands** on every OS. Use the terminal instead of PowerShell.
+- **Apple Silicon (M1–M4):** Microsoft publishes SQL Server images only for Intel/AMD, so `docker-compose.yml` asks for
+  `platform: linux/amd64` and Docker Desktop emulates it. In Docker Desktop → Settings → General, keep
+  **"Use Rosetta for x86_64/amd64 emulation on Apple Silicon"** on. The first start is slower; after that it works normally.
+- **Linux:** if `docker` needs `sudo`, either use `sudo docker compose up -d` or
+  [add your user to the `docker` group](https://docs.docker.com/engine/install/linux-postinstall/).
+- **Port already in use** (e.g. you already run SQL Server locally on 1433): in `docker-compose.yml` change `"1433:1433"` to
+  `"1434:1433"`. The API isn't affected, since it talks to the database inside Docker.
+- **Line endings** are normalised by `.gitattributes`, so a clone works the same on every OS.
 
 ## Project status
 | Step | Status |
