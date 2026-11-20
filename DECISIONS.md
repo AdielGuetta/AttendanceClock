@@ -45,6 +45,7 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 32 | **Managers type Zurich wall time; DST is resolved by the server** | 02:30 on the fall-back night is ambiguous → the UI asks "the first or the second 02:30?"; 02:30 on the spring-forward night doesn't exist → refused. |
 | 33 | **"Forgot to clock out" is computed on read** (open > 14 h, against the trusted clock), not stored | It changes with time; storing it would go stale. If the time service is down, lists still load, just without that flag. |
 | 34 | **Manager-only endpoints enforced on the server** (`[Authorize(Roles = "Manager")]` → 403); the Team tab is just a convenience | The UI never decides permissions. |
+| 35 | **Fail fast instead of silent defaults** for the dev containers: Vite gets `--config vite.config.ts` plus the port/host flags; `restart: unless-stopped`; a health check on the web container | After the merge incident (Vite silently came back with default settings), suggested by the user: a missing config should be an **error**, not a guess. Verified by re-creating the incident: Vite logged "failed to load config", kept its last good settings, and recovered when the file returned. No outage. |
 
 ## Edge cases
 
@@ -109,3 +110,4 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
   - in the UI walkthrough, a stale-tab message said "Refresh to see your status" although the screen refreshes itself. Reworded;
   - its merge procedure (`git switch main` before merging) briefly deleted the `frontend/` folder, so Vite restarted without
     its config and the app became unreachable. Diagnosed from the container log, fixed, and the procedure changed in CLAUDE.md.
+    I then pushed for a root fix: make the server *fail* rather than fall back to defaults (#35), re-tested by simulating the incident.

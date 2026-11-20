@@ -104,6 +104,10 @@ docker-compose.yml
   `git merge-base --is-ancestor main HEAD`). Don't `git switch main` *before* merging: that briefly deletes files that
   only exist on the branch, and the running watchers (Vite, dotnet watch) restart without them. This happened once:
   Vite came back on its default port 5173 with no config, and `docker compose restart web` was needed.
+  Since then the web container is fail-fast (`--config` + port flags, `restart: unless-stopped`, health check; DECISIONS #35),
+  so a missing config logs an error and keeps the last good server. Don't remove those flags.
+- Running the backend tests stops the `api` container for a minute (the "stop api / run / start api" pattern above).
+  The app is unreachable meanwhile, so tell the user if they might be trying it.
 - Commit messages: conventional style (`feat:`, `docs:`, `fix:`), a short body explaining why, and the Co-Authored-By trailer.
 - Never push to GitHub, or merge, without the user's approval.
 

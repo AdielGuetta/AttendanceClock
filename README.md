@@ -109,6 +109,8 @@ Your computer (Windows / macOS / Linux)
 
 **Good to know**
 - **Edit code → it reloads by itself.** `backend/` and `frontend/` are shared live into their containers.
+- **Self-healing:** the API and web containers restart automatically if they stop (`restart: unless-stopped`), and the web
+  container has a health check, so Docker Desktop shows "unhealthy" if the app stops answering.
 - **Data survives restarts.** It lives in the `db-data` *volume*, a storage area managed by Docker. Only
   `docker compose down -v` deletes it.
 - **Ports** connect your computer to the containers: `5174` → the app, `5080` → the API, `1433` → SQL Server.

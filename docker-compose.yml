@@ -32,6 +32,7 @@ services:
   api:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     container_name: attendance-api
+    restart: unless-stopped   # if it crashes, Docker starts it again
     working_dir: /src
     command: ["dotnet", "watch", "run", "--project", "AttendanceClock.Api", "--", "--urls", "http://0.0.0.0:5080"]
     environment:
@@ -60,7 +61,17 @@ services:
     image: node:24-alpine
     container_name: attendance-web
     working_dir: /app
-    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev"]
+    # Fail fast: the config file is named explicitly (missing → error, not silent defaults), and the vital settings
+    # are repeated as flags, so even a restart can't come up on the wrong port. See DECISIONS.md (merge incident).
+    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev -- --config vite.config.ts --host 0.0.0.0 --port 5174 --strictPort"]
+    restart: unless-stopped   # if it stops with an error, Docker starts it again
+    healthcheck:
+      # "Healthy" only if the app really answers on 5174; Docker Desktop shows "unhealthy" otherwise.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5174/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     environment:
       VITE_API_TARGET: "http://api:5080"
       CHOKIDAR_USEPOLLING: "1"   # file changes from Windows are detected by polling
