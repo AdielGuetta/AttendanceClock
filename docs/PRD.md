@@ -118,14 +118,17 @@ The UI shows a ticking Zurich clock for convenience. It's seeded from `GET /api/
 - *(D-8: JWT over cookies: simpler for a separate React dev server, and the API stays stateless. Trade-off: no server-side revocation; acceptable with a short lifetime.)*
 
 ### F2 Clock In / Clock Out
-- `POST /api/punches/clock-in`, `POST /api/punches/clock-out`. No body other than an optional `Idempotency-Key` header.
+- `POST /api/punches/clock-in`, `POST /api/punches/clock-out`. No body.
+  *(Revised in Plan 07: the optional `Idempotency-Key` header was dropped. The DB unique index already guarantees correctness,
+  and a repeated punch gets a `409` that includes the current state, so the UI can refresh. ✅ Implemented in [Plan 07](plans/07-clock-in-out.md).)*
 - Clock in: allowed only if the employee has **no open shift**. Creates a shift with `ClockIn*` set.
 - Clock out: allowed only if there **is** an open shift. Sets `ClockOut*` and computes `DurationMinutes`.
 - The response returns the full shift, including the recorded Zurich time and source.
 - **D-9: One open shift per employee is enforced in the database**, by a filtered unique index `UNIQUE (EmployeeId) WHERE ClockOutUtc IS NULL`, not only in code. Two concurrent requests can't both succeed; the loser gets `409 Conflict`. *(EC-1, EC-2)*
 
 ### F3 Current status
-- `GET /api/punches/status` → `{ state: "OnShift" | "OffShift", openShift?, todayTotalMinutes, weekTotalMinutes }`.
+- `GET /api/punches/status` → `{ state: "OnShift" | "OffShift", openShift? }`.
+  *(Revised in Plan 07: status deliberately doesn't call the time API, because the UI polls it and EC-17 applies. The today/week totals move to F4 history.)*
 - The main screen is one big context-aware button: **Clock In** or **Clock Out**, plus "on shift for 3h 12m".
 
 ### F4 My history
@@ -158,7 +161,7 @@ Flags never block the employee; they surface in the manager's view.
 
 | ID | Scenario | Handling |
 |---|---|---|
-| **EC-1** | Double-click on Clock In | UI disables the button while in flight; `Idempotency-Key` returns the same result; DB unique index is the final guard → 409. |
+| **EC-1** | Double-click on Clock In | UI disables the button while in flight; DB unique index is the final guard → 409 `ALREADY_ON_SHIFT` with the open shift. ✅ Tested with 10 simultaneous requests. |
 | **EC-2** | Two tabs / devices punch at the same time | DB filtered unique index + optimistic concurrency (`rowversion`) on the shift. One wins, the other gets 409 and the UI refetches status. |
 | **EC-3** | Clock Out with no open shift (stale tab) | 409 with a "you're not on shift" message; UI refetches status. |
 | **EC-4** | Forgot to clock out yesterday, tries to Clock In today | Clock in is blocked (there's still an open shift). UI explains: "You have an open shift since Mon 08:02. Clock out now (it will be flagged for your manager) or ask your manager to correct it." |
@@ -202,8 +205,7 @@ ShiftAudits
   Id, ShiftId, ChangedByEmployeeId, ChangedAtUtc (trusted clock),
   Field, OldValue, NewValue, Reason
 
-IdempotencyKeys (optional, short TTL)
-  Key, EmployeeId, ResponseJson, CreatedAtUtc
+IdempotencyKeys: dropped in Plan 07 (see F2)
 ```
 
 **D-11: a Shift row (in/out pair), not a raw "punch events" log.** Pairing is enforced by structure and constraints, and history queries are trivial. The trade-off (losing an append-only event log) is covered by `ShiftAudits` for every mutation after creation.

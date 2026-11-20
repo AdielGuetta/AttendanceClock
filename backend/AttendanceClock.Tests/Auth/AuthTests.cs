@@ -35,6 +35,7 @@ public sealed class AuthFixture : IDisposable
 }
 
 /// <summary>Plan 06 test table.</summary>
+[Collection(DatabaseCollection.Name)]
 public class AuthTests(AuthFixture fixture) : IClassFixture<AuthFixture>
 {
     private readonly HttpClient _client = fixture.Factory.CreateClient();

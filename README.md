@@ -52,6 +52,9 @@ The first start takes a few minutes (it downloads SQL Server and the .NET SDK). 
 Log in: `POST http://localhost:5080/api/auth/login` with `{"userName":"dana","password":"Employee123!"}`. The answer
 contains a token; send it as `Authorization: Bearer <token>`, e.g. to `GET /api/auth/me`.
 
+Punch (with the token): `POST /api/punches/clock-in`, `POST /api/punches/clock-out`, `GET /api/punches/status`.
+No body is sent: the server takes the time from the external time API.
+
 **Database setup is automatic:** SQL Server runs in a container, and the server creates and upgrades the tables on
 startup (EF Core migrations). There are no manual steps.
 
@@ -123,7 +126,8 @@ Your computer (Windows / macOS / Linux)
 | Choosing the time providers (measured) | ✅ |
 | Trusted clock: external time, backup, validation, 10 tests | ✅ |
 | Login and roles: JWT, hashed passwords, brute-force limit, 9 tests | ✅ |
-| Clock In / Clock Out | ⏭️ next |
+| Clock In / Clock Out / status: race-safe, DST-safe, 12 tests | ✅ |
+| Shift history and totals | ⏭️ next |
 | React UI | ⏳ |
 | Manager dashboard and corrections | ⏳ |
 

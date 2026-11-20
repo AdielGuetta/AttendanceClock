@@ -8,7 +8,8 @@ namespace AttendanceClock.Api.Common;
 /// </summary>
 public static class ApiProblem
 {
-    public static ObjectResult Create(int status, string code, string title, string? detail = null)
+    public static ObjectResult Create(int status, string code, string title, string? detail = null,
+        IReadOnlyDictionary<string, object?>? extra = null)
     {
         var problem = new ProblemDetails
         {
@@ -17,6 +18,8 @@ public static class ApiProblem
             Detail = detail,
             Extensions = { ["code"] = code },
         };
+        foreach (var (key, value) in extra ?? new Dictionary<string, object?>())
+            problem.Extensions[key] = value;
         return new ObjectResult(problem)
         {
             StatusCode = status,

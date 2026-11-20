@@ -25,6 +25,11 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 12 | **Passwords hashed with Identity's `PasswordHasher` only** | Microsoft's tested PBKDF2 + salt, without the full Identity table set we don't need. |
 | 13 | **One generic login error, equal timing, 5 attempts/min per IP** | Doesn't reveal which usernames exist; stops password guessing. |
 | 14 | **No self-registration; demo accounts seeded in Development** (D-1) | Internal tool. Reviewers can log in immediately (accounts listed in the README). |
+| 15 | **The server never trusts the UI** | The UI shows only the valid button, but stale tabs, double-clicks and direct API calls still reach the server. Rules are enforced in `ShiftService` and, finally, by the database. |
+| 16 | **No `Idempotency-Key` for punches** (revised PRD F2) | The DB unique index already guarantees one open shift; a repeated punch gets a clear `409` with the current state. Keys would add a table for a nicer response only. |
+| 17 | **`/status` doesn't call the time API** | The UI checks status often; external calls there would worsen the rush risk (EC-17). Elapsed time on screen is cosmetic; recorded times always come from the API. |
+| 18 | **Clock In must be after the previous Clock Out; Clock Out after Clock In** | Two providers that disagree by a second can't create overlapping or negative shifts. The punch is refused with `503 TIME_SOURCE_INCONSISTENT` instead. |
+| 19 | **Shifts over 14 h are recorded and flagged `TooLong`**, not blocked | The record stays honest; the manager reviews it (F7). |
 
 ## Edge cases
 
@@ -33,11 +38,17 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | Time API down / slow / garbage (EC-8) | Backup provider → otherwise 503 `TIME_SOURCE_UNAVAILABLE` | ✅ built + tested |
 | Provider returns an impossible offset or wrong zone | Rejected, next provider tried | ✅ built + tested |
 | DST "fall back": 02:30 happens twice (EC-7) | The offset distinguishes the two instants | ✅ tested |
-| Two open shifts (double-click, two tabs) (EC-1/2) | Database unique filtered index | ✅ enforced in DB (API handling planned) |
-| Clock Out before Clock In (EC-9) | Database check constraint | ✅ enforced in DB |
+| Two open shifts (double-click, two tabs) (EC-1/2) | Database unique filtered index → `409 ALREADY_ON_SHIFT` | ✅ tested: 10 simultaneous Clock Ins → exactly 1 shift |
+| Clock Out with no open shift (stale tab) (EC-3) | `409 NOT_ON_SHIFT` | ✅ tested |
+| Forgot to clock out, tries to clock in next day (EC-4) | `409` with "on shift since …" | ✅ tested |
+| Overnight shift (EC-5) | Duration from the instants; counted on the start date | ✅ tested (480 min) |
+| DST spring-forward during a night shift (EC-6) | 22:00 → 06:00 = 7 h, not 8 | ✅ tested |
+| Clock Out before Clock In (EC-9) | Rejected in code (`503 TIME_SOURCE_INCONSISTENT`) + DB check constraint | ✅ tested |
+| Time API down during a punch | `503`, nothing saved | ✅ tested |
+| Shift over 14 h (F7) | Saved, flagged `TooLong` | ✅ tested |
 | Expired / tampered / missing login token (EC-14) | 401; the UI will send the user back to login | ✅ API side built + tested |
 | Deactivated employee tries to log in | Same generic 401 as a wrong password | ✅ tested |
-| Forgot to clock out, overnight shifts, corrections | See PRD §6 | (planned) |
+| Manager corrections, deactivating an employee mid-shift | See PRD §6 | (planned) |
 
 ## What I chose not to do
 - **No fallback to the server clock**, even as a last resort (it would break the core rule silently).

@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using AttendanceClock.Api.Auth;
 using AttendanceClock.Api.Data;
 using AttendanceClock.Api.Domain;
+using AttendanceClock.Api.Punches;
 using AttendanceClock.Api.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -27,6 +28,9 @@ builder.Services.AddHttpClient<TimeNowSource>(ConfigureTimeHttpClient);
 builder.Services.AddTransient<IExternalTimeSource>(sp => sp.GetRequiredService<TimeApiIoSource>());
 builder.Services.AddTransient<IExternalTimeSource>(sp => sp.GetRequiredService<TimeNowSource>());
 builder.Services.AddTransient<ITrustedClock, FallbackTrustedClock>();
+
+// ── Clock In / Clock Out (Plan 07) ────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ShiftService>();
 
 // ── Login (Plan 06, PRD F1) ───────────────────────────────────────────────────────────────────────
 builder.Services.AddOptions<AuthOptions>()
