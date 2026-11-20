@@ -42,6 +42,9 @@ docker compose start api
   `docker exec -i attendance-db sh -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -I -d AttendanceClock'`
 - **Git Bash** rewrites `/opt/...` paths passed to `docker exec`. Prefix the command with `MSYS_NO_PATHCONV=1`.
 - The repo path contains Hebrew characters (`שעון`). Always quote paths.
+- **Windows PowerShell 5.1** reads UTF-8 files as ANSI by default and garbles `·`, `→`, `✅`. Don't edit files through
+  `Get-Content`/`Set-Content`; use the Edit/Write tools (or `sed` in Git Bash).
+- Integration tests use a separate database, `AttendanceClock_Tests`, deleted and recreated on every run (`ApiFactory`).
 - If the API container can't reach nuget.org right after `up`, it's a transient DNS hiccup: `docker restart attendance-api`.
 
 ## Code layout
@@ -57,7 +60,10 @@ backend/
     Data/Migrations/
     Time/                            # trusted clock: ITrustedClock, FallbackTrustedClock, provider sources, validation
     Controllers/                     # TimeController (GET /api/time/now)
-  AttendanceClock.Tests/             # xUnit; Time/ uses a fake HTTP handler (no real network calls)
+    Auth/                            # login: AuthController, TokenService (JWT), AuthOptions
+    Common/ApiProblem.cs             # ProblemDetails + stable error "code"
+    Data/DevDataSeeder.cs            # demo accounts (Development only)
+  AttendanceClock.Tests/             # xUnit. Time/: fake HTTP handler. Auth/: real app in memory (ApiFactory) + test DB
 docs/PRD.md                          # requirements and decisions
 DECISIONS.md                         # reviewer-facing summary of decisions, edge cases, limitations (keep brief, update each step)
 README.md                            # how to run + project status (update the status table each step)

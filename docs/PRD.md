@@ -110,9 +110,11 @@ The UI shows a ticking Zurich clock for convenience. It's seeded from `GET /api/
 ## 5. Functional requirements
 
 ### F1 Authentication
-- Login with username + password; ASP.NET Core Identity for password hashing.
+- Login with username + password. Passwords are hashed with ASP.NET Core Identity's `PasswordHasher` (PBKDF2 + salt); the full Identity table set isn't used.
 - JWT access token (short-lived, ~60 min); role claim `Employee` | `Manager`.
 - Deactivated users can't log in; their existing records are kept.
+- One generic error for unknown user / wrong password / deactivated (`INVALID_CREDENTIALS`), with equal timing; 5 login attempts per minute per IP → `429 TOO_MANY_ATTEMPTS`.
+- ✅ Implemented in [Plan 06](plans/06-login.md); demo accounts are seeded in Development.
 - *(D-8: JWT over cookies: simpler for a separate React dev server, and the API stays stateless. Trade-off: no server-side revocation; acceptable with a short lifetime.)*
 
 ### F2 Clock In / Clock Out

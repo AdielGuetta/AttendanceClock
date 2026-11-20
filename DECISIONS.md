@@ -21,6 +21,10 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 8 | **Safety rules in the database, not only in code** (D-9) | Filtered unique index = at most one open shift per employee, even under concurrent requests; check constraint = Clock Out after Clock In. |
 | 9 | **Docker Compose for local dev** (D-12) | Windows Smart App Control on the dev machine blocks locally built .NET assemblies, and turning it off would require a Windows reinstall. Docker needed no system changes, and reviewers get a one-command start. |
 | 10 | **.NET 10 (LTS) + EF Core 10** | Long-term support. EF Core 11 needs .NET 11, so packages are pinned to 10.0.x. |
+| 11 | **JWT login, 60-minute tokens** (D-8) | Stateless and simple with a separate React app. Trade-off: a token can't be revoked early; the short lifetime limits the risk. |
+| 12 | **Passwords hashed with Identity's `PasswordHasher` only** | Microsoft's tested PBKDF2 + salt, without the full Identity table set we don't need. |
+| 13 | **One generic login error, equal timing, 5 attempts/min per IP** | Doesn't reveal which usernames exist; stops password guessing. |
+| 14 | **No self-registration; demo accounts seeded in Development** (D-1) | Internal tool. Reviewers can log in immediately (accounts listed in the README). |
 
 ## Edge cases
 
@@ -31,6 +35,8 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | DST "fall back": 02:30 happens twice (EC-7) | The offset distinguishes the two instants | ✅ tested |
 | Two open shifts (double-click, two tabs) (EC-1/2) | Database unique filtered index | ✅ enforced in DB (API handling planned) |
 | Clock Out before Clock In (EC-9) | Database check constraint | ✅ enforced in DB |
+| Expired / tampered / missing login token (EC-14) | 401; the UI will send the user back to login | ✅ API side built + tested |
+| Deactivated employee tries to log in | Same generic 401 as a wrong password | ✅ tested |
 | Forgot to clock out, overnight shifts, corrections | See PRD §6 | (planned) |
 
 ## What I chose not to do
@@ -43,10 +49,13 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 - **The backup provider is flaky**: time.now failed ~20–30% of calls in our test. Both failing at once should be rare, but when it happens the punch is refused.
 - **Free third-party APIs** have no uptime guarantee. A paid or self-hosted time source would be the production answer.
 - `/health` doesn't check the time providers yet (planned).
+- No password change/reset or refresh tokens yet; logging out = the client discards its token.
+- The rate limit is per IP and in memory, so it resets on restart and isn't shared across multiple servers.
 
 ## Working with Claude Code
 - Rules for the AI live in [CLAUDE.md](CLAUDE.md); each big step starts with a plan in [docs/plans/](docs/plans/).
 - **Where it needed correcting:**
   - after switching to Docker, the PRD still said "no Docker". I caught it and had it fixed;
   - `dotnet add package` pulled EF Core 11 (incompatible with .NET 10), so versions are pinned;
-  - sqlcmd needed `-I` to work with the filtered index.
+  - sqlcmd needed `-I` to work with the filtered index;
+  - a PowerShell 5.1 file edit garbled non-ASCII characters (wrong default encoding). Caught, fixed and added to CLAUDE.md.

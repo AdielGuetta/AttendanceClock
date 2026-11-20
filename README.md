@@ -36,6 +36,16 @@ The first start takes a few minutes (it downloads SQL Server and the .NET SDK). 
 | http://localhost:5080/health | `Healthy`: the server is up and can reach the database |
 | http://localhost:5080/api/time/now | The current Zurich time from the external time API |
 
+### Demo accounts (created automatically in Development)
+| Username | Password | Role |
+|---|---|---|
+| `manager` | `Manager123!` | Manager |
+| `dana` | `Employee123!` | Employee |
+| `yossi` | `Employee123!` | Employee |
+
+Log in: `POST http://localhost:5080/api/auth/login` with `{"userName":"dana","password":"Employee123!"}`. The answer
+contains a token; send it as `Authorization: Bearer <token>`, e.g. to `GET /api/auth/me`.
+
 **Database setup is automatic:** SQL Server runs in a container, and the server creates and upgrades the tables on
 startup (EF Core migrations). There are no manual steps.
 
@@ -58,8 +68,8 @@ With the .NET 10 SDK and any SQL Server: set the connection string in
 | Database tables and safety rules | ✅ |
 | Choosing the time providers (measured) | ✅ |
 | Trusted clock: external time, backup, validation, 10 tests | ✅ |
+| Login and roles: JWT, hashed passwords, brute-force limit, 9 tests | ✅ |
 | Clock In / Clock Out | ⏭️ next |
-| Login and roles | ⏳ |
 | React UI | ⏳ |
 | Manager dashboard and corrections | ⏳ |
 
