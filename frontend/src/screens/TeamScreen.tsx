@@ -17,7 +17,7 @@ function mondayOf(date: string): string {
 }
 
 /** Manager-only: who's on shift now, everyone's shifts, and corrections (Plan 10). */
-export default function TeamScreen() {
+export default function TeamScreen({ onDataChanged }: { onDataChanged?: () => void }) {
   const { now } = useZurichClock();
   const [onShift, setOnShift] = useState<OnShift | null>(null);
   const [employees, setEmployees] = useState<EmployeeSummary[]>([]);
@@ -59,7 +59,7 @@ export default function TeamScreen() {
     if (!monday && now) setMonday(mondayOf(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(now)));
   }, [monday, now]);
 
-  const afterSave = () => { setEditing(null); void loadOnShift(); void loadShifts(); };
+  const afterSave = () => { setEditing(null); void loadOnShift(); void loadShifts(); onDataChanged?.(); /* update the tab badge */ };
 
   return (
     <section className="team-screen">

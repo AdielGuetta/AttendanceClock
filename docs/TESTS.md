@@ -3,7 +3,7 @@
 The assignment asks us to **identify edge cases and complex scenarios and handle them**. This document maps each edge case
 (IDs from [PRD §6](PRD.md)) to **how it's handled** and **which automated test proves it**.
 
-**Current result: 58 / 58 backend test cases + 10 / 10 frontend tests passing.**
+**Current result: 58 / 58 backend test cases + 13 / 13 frontend tests passing.**
 
 ```bash
 docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"              # backend
@@ -176,7 +176,7 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 | 11b | Non-existent spring-forward 02:30 is refused | EC-6 |
 | 12 | Audit history lists every change in order | D-11 |
 
-### Frontend: `frontend/src/time.test.ts` (Vitest, 10)
+### Frontend: `frontend/src/time.test.ts` (Vitest, 13)
 | # | Test | Proves |
 |---|---|---|
 | 1 | Server time "…08:02:11+01:00" → "08:02:11 CET" | Display reads Zurich time straight from the server |
@@ -189,6 +189,9 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 | 8 | 192 → "3 h 12 min" | "On shift for …" |
 | 9 | Date steps across month end and the DST day | Week navigation |
 | 10 | Seven dates of a week | |
+| 11 | Forgotten-shift alert quiet at exactly 14 h | Plan 11 |
+| 12 | Alert fires just after 14 h | Plan 11 |
+| 13 | Open time measured on real instants, across a DST change | Plan 11 |
 
 ## Manual checks done along the way
 - **Database rules (plan 03):** 5 direct SQL tests inside a rolled-back transaction: first shift accepted, second open shift

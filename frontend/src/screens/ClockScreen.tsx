@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, type PunchStatus } from "../api";
-import { formatDay, formatElapsed, formatRecordedTime, formatZurichNow, parseServerTime } from "../time";
+import { formatDay, formatElapsed, formatRecordedTime, formatZurichNow, isLikelyForgotten, openMinutes, parseServerTime } from "../time";
 import { useZurichClock } from "../useZurichClock";
 
 type Banner = { kind: "success" | "error" | "info"; text: string } | null;
@@ -46,8 +46,10 @@ export default function ClockScreen() {
 
   const zurich = now ? formatZurichNow(now) : null;
   const open = status?.openShift;
-  const elapsedMinutes = open && now ? Math.max(0, Math.floor((now.getTime() - Date.parse(open.clockIn)) / 60000)) : null;
+  const elapsedMinutes = open && now ? openMinutes(open.clockIn, now) : null;
   const openIn = open ? parseServerTime(open.clockIn) : null;
+  // Plan 11: an open shift older than 14 h was probably forgotten. We alert, we never auto-close (no invented times).
+  const forgotten = open && now ? isLikelyForgotten(open.clockIn, now) : false;
 
   return (
     <section className="clock-screen">
@@ -68,6 +70,14 @@ export default function ClockScreen() {
           <strong>Off shift</strong>
         )}
       </div>
+
+      {forgotten && openIn && elapsedMinutes !== null && (
+        <div className="banner warn" role="alert">
+          <strong>Did you forget to clock out?</strong> You've been on shift since {formatDay(openIn.date)}, {openIn.hm} {openIn.label}
+          {" "}({formatElapsed(elapsedMinutes)}). If you're still working, ignore this. If you left earlier, clock out now
+          and ask your manager to correct the end time. Your manager has been flagged too.
+        </div>
+      )}
 
       <button
         className={`punch ${onShift ? "out" : "in"}`}

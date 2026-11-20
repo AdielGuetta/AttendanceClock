@@ -59,6 +59,19 @@ export function formatZurichNow(now: Date) {
   };
 }
 
+/** Same threshold as the server (ShiftService.TooLongThreshold): an open shift older than this was probably forgotten. */
+export const FORGOT_CLOCK_OUT_MINUTES = 14 * 60;
+
+/** Minutes a shift has been open, by the given "now" (the cosmetic live clock). */
+export function openMinutes(clockInIso: string, now: Date): number {
+  return Math.max(0, Math.floor((now.getTime() - Date.parse(clockInIso)) / 60000));
+}
+
+/** True when an open shift is older than 14 hours (F7, Plan 11). */
+export function isLikelyForgotten(clockInIso: string, now: Date): boolean {
+  return openMinutes(clockInIso, now) > FORGOT_CLOCK_OUT_MINUTES;
+}
+
 // ── Calendar dates ("2026-11-16"), done in UTC so the device's time zone can't shift them ──
 
 export function addDays(date: string, days: number): string {

@@ -72,7 +72,7 @@ Stop with `docker compose down` (data is kept), or `docker compose down -v` to a
 ### Run the tests
 ```bash
 docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"   # backend: 58 tests
-docker compose run --rm --no-deps web sh -c "npm install && npx vitest run"   # frontend: 10 tests
+docker compose run --rm --no-deps web sh -c "npm install && npx vitest run"   # frontend: 13 tests
 ```
 
 ### Without Docker *(alternative, any OS)*
@@ -143,6 +143,7 @@ Your computer (Windows / macOS / Linux)
 | Shift history and totals: DST-safe days, nearest-minute totals that add up, 10 tests | ✅ |
 | React UI (employee): login, Clock In/Out, My week, phone-friendly, 10 tests | ✅ |
 | Manager: who's on shift, all shifts, corrections with reason + audit trail, 15 tests | ✅ |
+| Forgotten-shift alerts (> 14 h): employee banner + manager badge | ✅ |
 | Final polish: fresh-clone test, docs review | ⏭️ next |
 
 ## Documentation

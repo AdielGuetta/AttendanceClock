@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatElapsed, formatHM, formatRecordedTime, formatZurichNow, parseServerTime, weekDates } from "./time";
+import { addDays, formatElapsed, formatHM, formatRecordedTime, formatZurichNow, isLikelyForgotten, openMinutes, parseServerTime, weekDates } from "./time";
+
+describe("forgotten-shift alert (Plan 11)", () => {
+  const clockIn = "2026-11-19T08:00:00+01:00"; // = 07:00 UTC
+
+  it("is quiet at exactly 14 hours", () => {
+    expect(isLikelyForgotten(clockIn, new Date("2026-11-19T21:00:00Z"))).toBe(false);
+  });
+
+  it("fires just after 14 hours", () => {
+    expect(isLikelyForgotten(clockIn, new Date("2026-11-19T21:01:00Z"))).toBe(true);
+  });
+
+  it("measures real elapsed time, across a DST change too", () => {
+    // 27 Mar 2027 22:00 CET → 28 Mar 06:00 CEST (clocks jump forward overnight) = 7 real hours (420 min).
+    expect(openMinutes("2027-03-27T22:00:00+01:00", new Date("2027-03-28T04:00:00Z"))).toBe(420);
+  });
+});
 
 describe("recorded times from the server", () => {
   it("reads the Zurich wall-clock time straight from the string (winter = CET)", () => {

@@ -71,6 +71,9 @@ input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
 .banner.success { background: var(--green-soft); color: var(--green); }
 .banner.error { background: var(--red-soft); color: var(--red); }
 .banner.info { background: var(--blue-soft); color: var(--blue); }
+.banner.warn { background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber); text-align: left; }
+.tab-badge { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; margin-left: 6px; padding: 0 5px;
+  border-radius: 999px; background: var(--red); color: #fff; font-size: 0.75rem; font-weight: 700; text-align: center; }
 .fineprint { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 18px; }
 
 /* ── Clock screen ─────────────────────────────────── */

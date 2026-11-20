@@ -46,6 +46,7 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 33 | **"Forgot to clock out" is computed on read** (open > 14 h, against the trusted clock), not stored | It changes with time; storing it would go stale. If the time service is down, lists still load, just without that flag. |
 | 34 | **Manager-only endpoints enforced on the server** (`[Authorize(Roles = "Manager")]` → 403); the Team tab is just a convenience | The UI never decides permissions. |
 | 35 | **Fail fast instead of silent defaults** for the dev containers: Vite gets `--config vite.config.ts` plus the port/host flags; `restart: unless-stopped`; a health check on the web container | After the merge incident (Vite silently came back with default settings), suggested by the user: a missing config should be an **error**, not a guess. Verified by re-creating the incident: Vite logged "failed to load config", kept its last good settings, and recovered when the file returned. No outage. |
+| 36 | **Forgotten shifts (> 14 h) are alerted, never auto-closed**: a banner for the employee, a red count on the manager's Team tab | Auto-closing would invent a Clock Out time (not from the API, not from a person, likely wrong pay). Alerts make it hard to miss; the manager fixes it with the real time and a reason. E-mail/push not built (needs extra services). |
 
 ## Edge cases
 
@@ -96,6 +97,7 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 - No automated UI (end-to-end) tests yet: the screens were verified by a manual browser walkthrough, plus unit tests for the formatting.
 - **No employee management screen**: employees are seeded; creating, deactivating or resetting passwords isn't built (EC-12 open).
 - **No four-eyes rule**: a manager can correct their own shift (audited and flagged, but not approved by someone else).
+- Forgotten-shift alerts are in-app only (banner + Team badge); no e-mail or push notifications.
 - No CSV/payroll export; the shift list has no paging (one week at a time, max 93 days).
 
 ## Working with Claude Code
