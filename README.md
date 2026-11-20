@@ -6,7 +6,16 @@ An attendance system where employees **clock in and out** of shifts, and manager
 the browser's or the server's clock. If the time service is unavailable, the punch is refused rather than recorded with a
 time we can't trust.
 
-> 🚧 **Work in progress.** Built step by step; see [Project status](#project-status).
+**Quick start:** `docker compose up -d`, then open **http://localhost:5174** and log in as `dana` / `Employee123!`
+(employee) or `manager` / `Manager123!` (manager). Details below.
+
+**Highlights**
+- Punch times come only from **timeapi.io** (backup: **time.now**), validated against Zurich's DST rules. If both fail,
+  the punch is refused, never guessed.
+- The **database itself** guarantees one open shift per employee: 10 simultaneous clicks → exactly 1 shift (tested).
+- DST-safe everywhere: a night shift when clocks jump forward counts 7 h, not 8.
+- Manager corrections need a **reason** and leave an **append-only audit trail**; forgotten shifts are alerted, never auto-closed.
+- **58 backend + 13 frontend automated tests**; one command starts everything on Windows, macOS or Linux.
 
 ---
 
@@ -141,10 +150,10 @@ Your computer (Windows / macOS / Linux)
 | Login and roles: JWT, hashed passwords, brute-force limit, 9 tests | ✅ |
 | Clock In / Clock Out / status: race-safe, DST-safe, 12 tests | ✅ |
 | Shift history and totals: DST-safe days, nearest-minute totals that add up, 10 tests | ✅ |
-| React UI (employee): login, Clock In/Out, My week, phone-friendly, 10 tests | ✅ |
+| React UI (employee): login, Clock In/Out, My week, phone-friendly | ✅ |
 | Manager: who's on shift, all shifts, corrections with reason + audit trail, 15 tests | ✅ |
 | Forgotten-shift alerts (> 14 h): employee banner + manager badge | ✅ |
-| Final polish: fresh-clone test, docs review | ⏭️ next |
+| Final polish: fresh-clone test (clean DB, all tests green), docs review | ✅ |
 
 ## Documentation
 - [docs/PRD.md](docs/PRD.md): requirements, edge cases and design
@@ -153,4 +162,5 @@ Your computer (Windows / macOS / Linux)
   **Visual version:** [docs/TECH-STACK.pdf](docs/TECH-STACK.pdf) (diagrams: architecture, Clock In flow, waiting time, concurrency, Docker)
 - [docs/TESTS.md](docs/TESTS.md): every edge case (מקרי קצה), how it's handled, and which automated test proves it
 - [docs/plans/](docs/plans/): the plan for each step, with its results
-- [CLAUDE.md](CLAUDE.md): how Claude Code was guided on this project
+- [docs/WORKING-WITH-CLAUDE.md](docs/WORKING-WITH-CLAUDE.md): the process, where Claude Code helped, and where it had to be corrected
+- [CLAUDE.md](CLAUDE.md) and [.claude/](.claude/): the instructions and project commands Claude Code worked with

@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Status** | Draft v0.1 — for review |
-| **Date** | 2026-11-19 |
+| **Status** | v1.0, implemented. Changes made during implementation are marked *"Revised…"* in place and summarised in [DECISIONS.md](../DECISIONS.md) |
+| **Date** | 2026-11-19 (draft) · 2026-11-20 (final) |
 | **Deadline** | Sunday 2026-11-22, 08:00 |
 | **Stack** | ASP.NET Core (.NET 10) · Microsoft SQL Server · React (Vite + TypeScript) |
 | **Hard constraint** | Every Clock In / Clock Out timestamp comes from an **external time API**, in **Europe/Zurich**. Never the browser clock, never the server's local clock. |

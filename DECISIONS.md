@@ -3,7 +3,8 @@
 The main decisions, the edge cases, what was left out, and known limitations. Kept short. The full reasoning is in
 [docs/PRD.md](docs/PRD.md) (IDs like `D-5`, `EC-7`) and the step plans in [docs/plans/](docs/plans/).
 
-*This document grows with the project. Sections marked "(planned)" aren't built yet.*
+*Status at submission: everything in the "Key decisions" table is built and tested. What wasn't built is listed under
+"What I chose not to do" and "Known limitations". The story of how Claude Code was used is in [docs/WORKING-WITH-CLAUDE.md](docs/WORKING-WITH-CLAUDE.md).*
 
 ---
 
@@ -90,7 +91,7 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 - **Shift-start rush (EC-17):** every punch makes one external time call, so hundreds of punches in the same minute could
   hit the free provider's rate limits. SQL Server isn't the bottleneck. Mitigation (not built): let punches arriving
   within the same second share one in-flight time request, or use a paid provider.
-- `/health` doesn't check the time providers yet (planned).
+- `/health` checks the API and the database, but not the time providers (not done; the punch path reports provider problems itself).
 - No password change/reset or refresh tokens yet; logging out = the client discards its token.
 - The rate limit is per IP and in memory, so it resets on restart and isn't shared across multiple servers.
 - The UI runs on the Vite **dev server**; a production setup would build static files and serve them (e.g. from the API or a CDN).

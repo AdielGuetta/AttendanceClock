@@ -87,7 +87,9 @@ docs/TECH-STACK.pdf                  # visual version, generated from docs/visua
 docs/TESTS.md                        # edge case → handling → test mapping + list of all tests (update when tests change)
 DECISIONS.md                         # reviewer-facing summary of decisions, edge cases, limitations (keep brief, update each step)
 README.md                            # how to run + project status (update the status table each step)
-docs/plans/                          # implementation plans, one per step
+docs/plans/                          # implementation plans, one per step (01–03 retrospective)
+docs/WORKING-WITH-CLAUDE.md          # process + where Claude helped / was corrected (keep in sync with DECISIONS)
+.claude/commands/                    # project slash commands: /test, /wrap-up-step (the end-of-step checklist)
 docker-compose.yml
 ```
 
