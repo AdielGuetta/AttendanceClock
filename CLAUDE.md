@@ -69,6 +69,9 @@ backend/
                                      # [Collection(DatabaseCollection.Name)] so they never run in parallel.
 docs/PRD.md                          # requirements and decisions
 docs/TECH-STACK.md                   # pros/cons + user impact per component (update when a component is added or changed)
+docs/TECH-STACK.pdf                  # visual version, generated from docs/visual/tech-stack.html with headless Edge:
+                                     #   msedge --headless=new --no-pdf-header-footer --print-to-pdf=<pdf> <file-uri of html>
+docs/TESTS.md                        # edge case → handling → test mapping + list of all tests (update when tests change)
 DECISIONS.md                         # reviewer-facing summary of decisions, edge cases, limitations (keep brief, update each step)
 README.md                            # how to run + project status (update the status table each step)
 docs/plans/                          # implementation plans, one per step

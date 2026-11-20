@@ -3,6 +3,8 @@
 For each component: **why it's here**, its **technical pros and cons**, and **what it means for the people using the
 system**: employees punching the clock, managers reviewing shifts, and (for tooling) reviewers and developers.
 
+📄 **A visual version with diagrams is in [TECH-STACK.pdf](TECH-STACK.pdf).**
+
 Components marked **(required)** were fixed by the assignment. Their pros and cons are still listed, because they shape the design.
 
 ---
