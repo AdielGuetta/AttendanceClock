@@ -174,6 +174,7 @@ Flags never block the employee; they surface in the manager's view.
 | **EC-14** | Expired JWT mid-session | 401 → UI redirects to login, keeps nothing stale. |
 | **EC-15** | Punch request arrives, API call succeeds, DB write fails | Transaction; nothing is saved; the user gets an error and retries. The idempotency key makes the retry safe. |
 | **EC-16** | A manager edits their own shift | Allowed but audited (and flagged `Corrected`). Noted as a known limitation: no four-eyes rule. |
+| **EC-17** | **Shift-start rush:** many employees punch in the same minute (e.g. 200 at 08:00) | The database copes easily (different rows, no blocking). The weak point is the **free time API**: one call per punch may hit its rate limits → slow answers or blocks → the flaky backup takes over → in the worst case, refused punches. **Known limitation for now.** Mitigation options: (a) share one fetched time among punches arriving within the same ~1 s (requests wait for one in-flight call instead of each calling); (b) a paid provider with an SLA; (c) a self-hosted NTP-synced time service. Not "cache for minutes", because each punch needs a fresh time. |
 
 ---
 

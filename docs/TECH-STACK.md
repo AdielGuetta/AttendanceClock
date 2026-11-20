@@ -46,6 +46,14 @@ Components marked **(required)** were fixed by the assignment. Their pros and co
 - A native `datetimeoffset` type stores the instant plus the Zurich offset in one column, which keeps DST handling simple.
 - Strong transactions: a punch is saved completely or not at all.
 
+**Concurrency (many users at once)**
+- Different employees punching at the same moment touch different rows, so they don't block each other. Hundreds of punches
+  per second are well within SQL Server's capacity.
+- Same employee twice at once (double-click, two tabs): the second insert waits briefly for the first, then hits the
+  "one open shift" unique index and is refused. Exactly one shift is created.
+- Two people editing the same shift: `rowversion` detects that the row changed since it was loaded, so the second save
+  fails with "please refresh" instead of silently overwriting (optimistic concurrency).
+
 **Cons**
 - Heavy: the image is about 2 GB and needs about 2 GB of RAM.
 - No ARM image, so Apple-chip Macs need emulation.
@@ -82,9 +90,12 @@ Components marked **(required)** were fixed by the assignment. Their pros and co
 - Free services have **no uptime guarantee (SLA)**. The backup failed ~20–30% of calls in our test.
 - Adds latency: typically ~0.1–0.3 s, sometimes ~1.3 s.
 - Providers could change their response format; our validation would then reject answers, safely but disruptively.
+- **One call per punch.** At a shift-start rush (say 200 punches at 08:00), a free provider may rate-limit us. See PRD EC-17
+  for mitigation options; the main one is sharing a single in-flight request among punches in the same second.
 
 **User impact**
 - A punch takes a moment longer than a purely local system. The UI will show a short "Recording…" state.
+- At a busy shift start, punches may be slower, and in the worst case some employees get "please try again".
 - The time shown as confirmation is the **official recorded time**, so employees and managers see the same trustworthy number.
 
 ## Trusted clock + fail-closed policy

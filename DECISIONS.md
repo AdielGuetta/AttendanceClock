@@ -48,6 +48,9 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 ## Known limitations and risks
 - **The backup provider is flaky**: time.now failed ~20–30% of calls in our test. Both failing at once should be rare, but when it happens the punch is refused.
 - **Free third-party APIs** have no uptime guarantee. A paid or self-hosted time source would be the production answer.
+- **Shift-start rush (EC-17):** every punch makes one external time call, so hundreds of punches in the same minute could
+  hit the free provider's rate limits. SQL Server isn't the bottleneck. Mitigation (not built): let punches arriving
+  within the same second share one in-flight time request, or use a paid provider.
 - `/health` doesn't check the time providers yet (planned).
 - No password change/reset or refresh tokens yet; logging out = the client discards its token.
 - The rate limit is per IP and in memory, so it resets on restart and isn't shared across multiple servers.
