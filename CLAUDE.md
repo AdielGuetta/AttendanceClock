@@ -31,7 +31,8 @@ docker compose stop api
 docker compose run --rm --no-deps api sh -c "cd /src && dotnet tool restore && <command>"
 docker compose start api
 ```
-- Run tests: `dotnet test` (inside the container, as above).
+- Run backend tests: `docker compose run --rm tests` (a separate container with its own bin/obj volumes, profile `tests`),
+  so the running API is **not** stopped. Use the stop/run/start pattern above only for `dotnet ef` and `dotnet add package`.
 - Frontend: never run `npm`/`vite` on Windows either (esbuild is unsigned). Use the web container:
   `docker exec attendance-web sh -c "npx tsc -b && npx vitest run"`. Port **5174** (5173 is taken by another local project).
 - Add a migration: `dotnet ef migrations add <Name> --project AttendanceClock.Api --output-dir Data/Migrations`.
@@ -106,8 +107,8 @@ docker-compose.yml
   Vite came back on its default port 5173 with no config, and `docker compose restart web` was needed.
   Since then the web container is fail-fast (`--config` + port flags, `restart: unless-stopped`, health check; DECISIONS #35),
   so a missing config logs an error and keeps the last good server. Don't remove those flags.
-- Running the backend tests stops the `api` container for a minute (the "stop api / run / start api" pattern above).
-  The app is unreachable meanwhile, so tell the user if they might be trying it.
+- Running `dotnet ef` / `dotnet add package` stops the `api` container for a minute (stop/run/start pattern above), so the
+  app is unreachable meanwhile; tell the user. (Tests no longer need this: use the `tests` container.)
 - Commit messages: conventional style (`feat:`, `docs:`, `fix:`), a short body explaining why, and the Co-Authored-By trailer.
 - Never push to GitHub, or merge, without the user's approval.
 

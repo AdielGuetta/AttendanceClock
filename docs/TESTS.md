@@ -6,7 +6,7 @@ The assignment asks us to **identify edge cases and complex scenarios and handle
 **Current result: 58 / 58 backend test cases + 13 / 13 frontend tests passing.**
 
 ```bash
-docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"              # backend
+docker compose run --rm tests                                                     # backend (own build folders; the app keeps running)
 docker compose run --rm --no-deps web sh -c "npm install && npx vitest run"       # frontend
 ```
 

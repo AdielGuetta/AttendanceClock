@@ -83,11 +83,36 @@ services:
     depends_on:
       - api
 
+  # 4) Backend tests, on demand only:  docker compose run --rm tests
+  #    Own build folders (volumes), so it never collides with the running API's "dotnet watch" build.
+  #    Not started by "docker compose up" (profile "tests").
+  tests:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    profiles: ["tests"]
+    working_dir: /src
+    command: ["dotnet", "test", "AttendanceClock.slnx"]
+    environment:
+      # Tests derive their own database name (AttendanceClock_Tests) from this server address.
+      ConnectionStrings__Default: "Server=db,1433;Database=AttendanceClock;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Dev_Passw0rd_2026!};TrustServerCertificate=True"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    volumes:
+      - ./backend:/src
+      - testrun-api-bin:/src/AttendanceClock.Api/bin
+      - testrun-api-obj:/src/AttendanceClock.Api/obj
+      - tests-bin:/src/AttendanceClock.Tests/bin
+      - tests-obj:/src/AttendanceClock.Tests/obj
+      - nuget-cache:/root/.nuget/packages
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   db-data:
   api-bin:
   api-obj:
   tests-bin:
   tests-obj:
+  testrun-api-bin:
+  testrun-api-obj:
   nuget-cache:
   web-node-modules:
