@@ -245,7 +245,7 @@ Errors use **ProblemDetails** (RFC 9457) with stable error codes (`ALREADY_ON_SH
   - integration tests against a real SQL Server (the Docker container) for the unique-index / concurrency guarantees.
 - **Security:** hashed passwords (Identity), role-based authorization on every endpoint, employees can only read their own data, no secrets in the repo (user-secrets / env vars; dev defaults documented).
 - **Observability:** structured logs for every punch attempt (employee, provider used, latency, outcome); provider failures logged as warnings.
-- **Local setup (Docker, D-12):** `docker compose up -d` starts SQL Server 2022 and the API (`dotnet watch`, auto-applies migrations + seed in Development) → `npm run dev` for the UI. The README also documents running without Docker (`dotnet run` against any SQL Server, via a configurable connection string).
+- **Local setup (Docker, D-12):** `docker compose up -d` starts SQL Server 2022 and the API (`dotnet watch`, auto-applies migrations + seed in Development) and the React app (Vite, http://localhost:5174), all three in containers. The README also documents running without Docker (`dotnet run` against any SQL Server, via a configurable connection string).
 - **UX:** responsive (punching from a phone is realistic); one-tap primary action; clear error messages.
 
 ---

@@ -3,10 +3,11 @@
 The assignment asks us to **identify edge cases and complex scenarios and handle them**. This document maps each edge case
 (IDs from [PRD §6](PRD.md)) to **how it's handled** and **which automated test proves it**.
 
-**Current result: 43 / 43 test cases passing** (41 test methods; one runs with 3 inputs).
+**Current result: 43 / 43 backend test cases + 10 / 10 frontend tests passing.**
 
 ```bash
-docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"
+docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"              # backend
+docker compose run --rm --no-deps web sh -c "npm install && npx vitest run"       # frontend
 ```
 
 ---
@@ -150,7 +151,23 @@ Legend: ✅ automated test · 🔒 enforced by the database · 🟡 handled by d
 
 ---
 
+### Frontend: `frontend/src/time.test.ts` (Vitest, 10)
+| # | Test | Proves |
+|---|---|---|
+| 1 | Server time "…08:02:11+01:00" → "08:02:11 CET" | Display reads Zurich time straight from the server |
+| 2 | "+02:00" → CEST | Summer label |
+| 3 | 23:30 Zurich stays 23:30 / same date | Independent of the device's time zone (EC-10) |
+| 4 | Live clock: UTC instant → Zurich winter time + date | |
+| 5 | Live clock: UTC instant → Zurich summer time | |
+| 6 | Label switches CET → CEST exactly at 01:00 UTC on 29 Mar 2026 (01:59:59 → 03:00:00) | DST on screen |
+| 7 | 510 → "8:30", 5 → "0:05" | Duration format |
+| 8 | 192 → "3 h 12 min" | "On shift for …" |
+| 9 | Date steps across month end and the DST day | Week navigation |
+| 10 | Seven dates of a week | |
+
 ## Manual checks done along the way
 - **Database rules (plan 03):** 5 direct SQL tests inside a rolled-back transaction: first shift accepted, second open shift
   rejected, Clock Out before Clock In rejected, normal Clock Out accepted, next-day shift accepted.
 - **Live runs** against the real time API: `/api/time/now` (plan 05), real logins (plan 06), and a real clock-in/out cycle (plan 07).
+- **Browser walkthrough of the UI (plan 09):** wrong password, login, Clock In, refresh, a **stale tab after a second
+  device clocked out** (409 → message + self-refresh), My week, phone-size layout, log out.

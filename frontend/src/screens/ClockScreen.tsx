@@ -1,0 +1,104 @@
+import { useCallback, useEffect, useState } from "react";
+import { api, ApiError, type PunchStatus } from "../api";
+import { formatDay, formatElapsed, formatRecordedTime, formatZurichNow, parseServerTime } from "../time";
+import { useZurichClock } from "../useZurichClock";
+
+type Banner = { kind: "success" | "error" | "info"; text: string } | null;
+
+export default function ClockScreen() {
+  const { now, error: clockError } = useZurichClock();
+  const [status, setStatus] = useState<PunchStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [banner, setBanner] = useState<Banner>(null);
+
+  const refresh = useCallback(async () => {
+    try { setStatus(await api.status()); } catch { /* 401 is handled globally; keep the last known status */ }
+  }, []);
+
+  // Load the status now, and again whenever the user comes back to this tab: another device may have punched.
+  useEffect(() => {
+    void refresh();
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refresh]);
+
+  const onShift = status?.state === "OnShift";
+
+  const punch = async () => {
+    setBusy(true); // disables the button: no double-clicks (EC-1). The server guards anyway.
+    setBanner(null);
+    try {
+      if (onShift) {
+        const shift = await api.clockOut();
+        setBanner({ kind: "success", text: `Clocked out at ${formatRecordedTime(shift.clockOut!)} · source ${shift.clockOutSource}` });
+      } else {
+        const shift = await api.clockIn();
+        setBanner({ kind: "success", text: `Clocked in at ${formatRecordedTime(shift.clockIn)} · source ${shift.clockInSource}` });
+      }
+    } catch (err) {
+      setBanner({ kind: "error", text: messageFor(err) });
+    } finally {
+      await refresh(); // show the server's truth, whatever happened
+      setBusy(false);
+    }
+  };
+
+  const zurich = now ? formatZurichNow(now) : null;
+  const open = status?.openShift;
+  const elapsedMinutes = open && now ? Math.max(0, Math.floor((now.getTime() - Date.parse(open.clockIn)) / 60000)) : null;
+  const openIn = open ? parseServerTime(open.clockIn) : null;
+
+  return (
+    <section className="clock-screen">
+      <div className="live-clock" aria-live="off">
+        <div className="live-time">{zurich ? zurich.time : "--:--:--"}</div>
+        <div className="live-date">
+          {zurich ? <>{zurich.date} · Zurich time ({zurich.label})</> : clockError ? "Official time unavailable right now" : "Getting the official time…"}
+        </div>
+      </div>
+
+      <div className={`status ${onShift ? "on" : "off"}`}>
+        {status === null ? "Loading your status…" : onShift && openIn ? (
+          <>
+            <strong>On shift</strong> since {openIn.date === zurich?.dateIso ? "" : `${formatDay(openIn.date)}, `}{openIn.hm} {openIn.label}
+            {elapsedMinutes !== null && <> · {formatElapsed(elapsedMinutes)}</>}
+          </>
+        ) : (
+          <strong>Off shift</strong>
+        )}
+      </div>
+
+      <button
+        className={`punch ${onShift ? "out" : "in"}`}
+        onClick={punch}
+        disabled={busy || status === null}
+      >
+        {busy ? "Recording…" : onShift ? "Clock Out" : "Clock In"}
+      </button>
+
+      {banner && <div className={`banner ${banner.kind}`} role="status">{banner.text}</div>}
+
+      <p className="fineprint">
+        The recorded time always comes from an official time service, never from this device's clock.
+        The clock above is for display only.
+      </p>
+    </section>
+  );
+}
+
+function messageFor(err: unknown): string {
+  if (!(err instanceof ApiError)) return "Something went wrong. Please try again.";
+  switch (err.code) {
+    // A stale tab or another device (EC-3/EC-4). The status is refreshed right after, so say so.
+    case "ALREADY_ON_SHIFT":
+      return `${err.detail ?? err.title} Your status below is up to date.`;
+    case "NOT_ON_SHIFT":
+      return "You're not on shift: this shift was already closed (maybe from another device). Your status below is up to date.";
+    case "TIME_SOURCE_UNAVAILABLE":
+    case "TIME_SOURCE_INCONSISTENT":
+      return "Couldn't get the official time. Nothing was recorded. Please try again in a moment."; // fail closed (EC-8)
+    default:
+      return err.message;
+  }
+}

@@ -53,6 +53,25 @@ services:
       db:
         condition: service_healthy
 
+  # 3) Screens: the React app (Vite dev server). Open http://localhost:5174
+  #    (not Vite's usual 5173, which other local projects often occupy)
+  #    It forwards /api/* calls to the "api" container, so the browser talks to one address only.
+  web:
+    image: node:24-alpine
+    container_name: attendance-web
+    working_dir: /app
+    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev"]
+    environment:
+      VITE_API_TARGET: "http://api:5080"
+      CHOKIDAR_USEPOLLING: "1"   # file changes from Windows are detected by polling
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./frontend:/app                       # our React code, shared live from Windows
+      - web-node-modules:/app/node_modules    # downloaded packages stay inside Docker
+    depends_on:
+      - api
+
 volumes:
   db-data:
   api-bin:
@@ -60,3 +79,4 @@ volumes:
   tests-bin:
   tests-obj:
   nuget-cache:
+  web-node-modules:

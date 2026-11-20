@@ -33,6 +33,12 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | 20 | **History day boundaries use Zurich's official rules**; a shift belongs to its Clock In date (D-10) | DST days are 23 or 25 hours long. An overnight shift is counted once, on its start date. |
 | 21 | **Each shift rounds to the nearest minute; totals = the sum of the rows** | First version rounded each shift *down* and added those, which loses time systematically (found in the live check). Adding exact durations fixed the loss, but then the rows didn't visibly add up to the total. Nearest-minute rounding is fair in both directions (≤ 30 s per shift) **and** what the employee sees always adds up. |
 | 22 | **History: only your own shifts (id from the token), max 93 days, default = current Zurich week via the trusted clock** | No peeking at others' data via the URL; bounded queries; "today" comes from a trusted source. |
+| 23 | **React UI runs in Docker too (Node 24, Vite), with a Vite proxy for `/api`** | Vite's unsigned native helper would face the same Smart App Control block; the proxy means one address for the browser and no CORS setup. |
+| 24 | **One big context-aware button, disabled while recording** | The UI prevents ordinary double-clicks; the server still enforces the rules (#15). After any punch or error, the status is re-read from the server. |
+| 25 | **Times shown straight from the server's ISO string (already Zurich + offset), labelled CET/CEST** | No conversion on the device, so a phone set to another zone still shows Zurich time. The live clock is cosmetic (server time + elapsed `performance.now()`). |
+| 26 | **No router or UI library: three screens, a tab switch and plain CSS** | Less to install, explain and maintain for a small app. |
+| 27 | **Login badge kept in `localStorage`** | Survives a refresh. Trade-off: readable by scripts if the page had an XSS hole. Mitigated: React escapes all output, no raw HTML, 60-minute expiry. |
+| 28 | **App on port 5174, not Vite's default 5173** | During testing, another local Vite project was on 5173 and the browser showed the *wrong app*. Moved ours rather than stopping the user's other project. |
 
 ## Edge cases
 
@@ -51,6 +57,9 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 | Shift over 14 h (F7) | Saved, flagged `TooLong` | ✅ tested |
 | History: overnight shift / shift at 00:30 on a DST day | Counted on its start date; boundaries from Zurich rules | ✅ tested |
 | History: another employee's shifts | Never returned (id from the token) | ✅ tested |
+| UI: stale tab / second device presses an outdated button | Server `409` → clear message, screen refreshes itself | ✅ checked live in the browser |
+| UI: device clock or time zone wrong | Recorded and displayed times come from the server; the live clock is server-seeded | ✅ by design + formatting tests |
+| UI: login badge expires mid-session | Any `401` → back to the login screen with a message | ✅ built (not yet tested automatically) |
 | Expired / tampered / missing login token (EC-14) | 401; the UI will send the user back to login | ✅ API side built + tested |
 | Deactivated employee tries to log in | Same generic 401 as a wrong password | ✅ tested |
 | Manager corrections, deactivating an employee mid-shift | See PRD §6 | (planned) |
@@ -70,6 +79,8 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
 - `/health` doesn't check the time providers yet (planned).
 - No password change/reset or refresh tokens yet; logging out = the client discards its token.
 - The rate limit is per IP and in memory, so it resets on restart and isn't shared across multiple servers.
+- The UI runs on the Vite **dev server**; a production setup would build static files and serve them (e.g. from the API or a CDN).
+- No automated UI (end-to-end) tests yet: the screens were verified by a manual browser walkthrough, plus unit tests for the formatting.
 
 ## Working with Claude Code
 - Rules for the AI live in [CLAUDE.md](CLAUDE.md); each big step starts with a plan in [docs/plans/](docs/plans/).
@@ -79,4 +90,5 @@ The main decisions, the edge cases, what was left out, and known limitations. Ke
   - sqlcmd needed `-I` to work with the filtered index;
   - a PowerShell 5.1 file edit garbled non-ASCII characters (wrong default encoding). Caught, fixed and added to CLAUDE.md;
   - its fix for the history rounding bug was mathematically right but made the rows not visibly add up to the total.
-    I pushed back from the user's point of view, and we switched to nearest-minute rounding (DECISIONS #21).
+    I pushed back from the user's point of view, and we switched to nearest-minute rounding (DECISIONS #21);
+  - in the UI walkthrough, a stale-tab message said "Refresh to see your status" although the screen refreshes itself. Reworded.

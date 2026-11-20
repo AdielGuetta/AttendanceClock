@@ -20,7 +20,7 @@ Components marked **(required)** were fixed by the assignment. Their pros and co
 | Trusted clock + fail-closed | Wraps the time APIs | One safe path for "now" | Refuses punches when both APIs are down | Correct times, occasionally a retry message |
 | JWT login | Who's calling, which role | Stateless, simple with React | Can't revoke a token early | Log in once, then work for an hour |
 | Password hashing + rate limit | Account security | Stolen DB ≠ stolen passwords; no guessing | Lockout can hit a user who mistypes | After 5 typos: wait a minute |
-| React + Vite + TypeScript **(required, planned)** | UI | Instant, app-like screens | Needs JavaScript; more moving parts | One big Clock In/Out button, fast feedback |
+| React + Vite + TypeScript **(required)** | UI | Instant, app-like screens | Needs JavaScript; more moving parts | One big Clock In/Out button, fast feedback |
 | Docker Compose | Local environment | One command, any OS | Extra layer; slower on Apple-chip Macs | None for end users; easy for reviewers |
 | xUnit + in-memory API tests | Automated tests | Catches regressions in seconds | Takes time to write | Indirect: features keep working |
 
@@ -145,7 +145,7 @@ Components marked **(required)** were fixed by the assignment. Their pros and co
 - An employee who **mistypes 5 times must wait a minute.** The message says so clearly ("Too many login attempts. Please wait a minute").
 - Error messages stay deliberately vague ("Invalid username or password"). That's slightly less helpful, but safer.
 
-## Frontend: React + Vite + TypeScript **(required, planned)**
+## Frontend: React + Vite + TypeScript **(required)**
 **Pros**
 - App-like: instant screen updates without page reloads.
 - TypeScript catches mistakes before they reach users.
@@ -158,7 +158,7 @@ Components marked **(required)** were fixed by the assignment. Their pros and co
 - More moving parts (routing, state, API calls) than a server-rendered page.
 - Vite's build tool uses an unsigned native binary, so it may also need to run in Docker on the dev machine.
 
-**User impact (planned)**
+**User impact**
 - One large, context-aware **Clock In / Clock Out** button that works well on phones.
 - Immediate feedback: "Recording…", then the official recorded time.
 - All times shown in Zurich time with a CET/CEST label, whatever the device's own zone.

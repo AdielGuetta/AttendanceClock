@@ -67,7 +67,7 @@
     <div><b>timeapi.io + time.now</b>External time <span class="pill req">required</span></div>
     <div><b>Trusted clock</b>Fail-closed time logic</div>
     <div><b>JWT + PBKDF2 + rate limit</b>Login and security</div>
-    <div><b>React + Vite + TypeScript</b>UI (planned) <span class="pill req">required</span></div>
+    <div><b>React + Vite + TypeScript</b>UI <span class="pill req">required</span></div>
     <div><b>Docker Compose</b>Local environment</div>
   </div>
   <div class="legend" style="margin-top:22px">
@@ -93,7 +93,7 @@
     <!-- user -->
     <rect x="10" y="185" width="130" height="90" rx="12" fill="#efebff" stroke="#6b4fd8"/>
     <text x="75" y="215" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2433">Browser</text>
-    <text x="75" y="234" text-anchor="middle" font-size="11" fill="#5b6475">React UI (planned)</text>
+    <text x="75" y="234" text-anchor="middle" font-size="11" fill="#5b6475">React UI</text>
     <text x="75" y="252" text-anchor="middle" font-size="10" fill="#5b6475">Employee / Manager</text>
 
     <!-- docker box -->
@@ -409,9 +409,9 @@
       <div class="row"><span class="ic c">−</span><span>Limit is in memory and per IP (resets on restart; an office shares one IP)</span></div>
       <div class="row"><span class="ic u">→</span><span>5 typos → "please wait a minute"; deliberately vague errors</span></div></div>
 
-    <div class="card"><h3>React + Vite + TypeScript <span class="pill req">required</span></h3><div class="role">UI (planned)</div>
+    <div class="card"><h3>React + Vite + TypeScript <span class="pill req">required</span></h3><div class="role">UI</div>
       <div class="row"><span class="ic p">+</span><span>App-like updates; TypeScript catches mistakes early</span></div>
-      <div class="row"><span class="ic c">−</span><span>Needs JavaScript; more moving parts; Vite's binary may need Docker here</span></div>
+      <div class="row"><span class="ic c">−</span><span>Needs JavaScript; more moving parts; runs in Docker (port 5174)</span></div>
       <div class="row"><span class="ic u">→</span><span>One big context-aware button; "Recording…" then the official time</span></div>
       <div class="row"><span class="ic u">→</span><span>Times always in Zurich time with a CET/CEST label</span></div></div>
 
@@ -425,7 +425,7 @@
       <div class="row"><span class="ic p">+</span><span>Simulates outages, DST nights, races and attacks in seconds</span></div>
       <div class="row"><span class="ic p">+</span><span>Separate test database, reset every run: dev data never touched</span></div>
       <div class="row"><span class="ic c">−</span><span>Needs the DB container; costs time on a tight deadline</span></div>
-      <div class="row"><span class="ic u">→</span><span>Core guarantees re-checked on every change (31/31 passing)</span></div></div>
+      <div class="row"><span class="ic u">→</span><span>Core guarantees re-checked on every change (43 backend + 10 frontend, all passing)</span></div></div>
   </div>
 
   <div class="section-head" style="margin-top:22px"><h2>8 · Docker in one picture</h2></div>

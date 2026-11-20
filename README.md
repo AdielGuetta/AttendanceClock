@@ -15,7 +15,7 @@ time we can't trust.
 |---|---|
 | Backend | ASP.NET Core (.NET 10), C# |
 | Database | Microsoft SQL Server 2022, Entity Framework Core 10 |
-| Frontend | React (Vite + TypeScript), *coming soon* |
+| Frontend | React 19 (Vite + TypeScript) |
 | Time source | [timeapi.io](https://timeapi.io) (primary), [time.now](https://time.now) (backup) |
 | Local environment | Docker Compose |
 
@@ -35,10 +35,11 @@ cd AttendanceClock
 docker compose up -d
 ```
 
-The first start takes a few minutes (it downloads SQL Server and the .NET SDK). Then open:
+The first start takes a few minutes (it downloads SQL Server, the .NET SDK and Node). Then open:
 
 | URL | What you'll see |
 |---|---|
+| **http://localhost:5174** | **The app**: log in, Clock In / Clock Out, My week |
 | http://localhost:5080/health | `Healthy`: the server is up and can reach the database |
 | http://localhost:5080/api/time/now | The current Zurich time from the external time API |
 
@@ -48,6 +49,8 @@ The first start takes a few minutes (it downloads SQL Server and the .NET SDK). 
 | `manager` | `Manager123!` | Manager |
 | `dana` | `Employee123!` | Employee |
 | `yossi` | `Employee123!` | Employee |
+
+**Using the API directly** (optional; the app does all of this for you):
 
 Log in: `POST http://localhost:5080/api/auth/login` with `{"userName":"dana","password":"Employee123!"}`. The answer
 contains a token; send it as `Authorization: Bearer <token>`, e.g. to `GET /api/auth/me`.
@@ -65,7 +68,8 @@ Stop with `docker compose down` (data is kept), or `docker compose down -v` to a
 
 ### Run the tests
 ```bash
-docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"
+docker compose run --rm --no-deps api sh -c "cd /src && dotnet test"   # backend: 43 tests
+docker compose run --rm --no-deps web sh -c "npm install && npx vitest run"   # frontend: 10 tests
 ```
 
 ### Without Docker *(alternative, any OS)*
@@ -76,35 +80,36 @@ Docker is the main path. See [DECISIONS.md](DECISIONS.md), #9.)*
 
 ## How the Docker setup works
 
-`docker-compose.yml` describes two **containers**. A container is an isolated mini-computer (Linux inside) that holds
+`docker-compose.yml` describes three **containers**. A container is an isolated mini-computer (Linux inside) that holds
 one program plus everything it needs. They're started from **images**, ready-made templates downloaded once.
 
 ```
 Your computer (Windows / macOS / Linux)
 │
-│  http://localhost:5080 ──────────────┐            localhost:1433 (optional: SSMS, Azure Data Studio…)
-│                                      ▼                 │
-│  ┌─ Docker ─────────────────────────────────────────────┼────────────────────┐
-│  │  attendance-api                                      ▼                    │
-│  │  image: .NET 10 SDK            ──── "db:1433" ───►  attendance-db         │
-│  │  runs: dotnet watch                                  image: SQL Server 2022│
-│  │  code: ./backend (live from your disk)               data: volume db-data │
-│  │  build output: volumes (api-bin, api-obj…)                                │
-│  └───────────────────────────────────────────────────────────────────────────┘
+│  browser → http://localhost:5174                      localhost:1433 (optional: SSMS, Azure Data Studio…)
+│                │                                            │
+│  ┌─ Docker ────┼────────────────────────────────────────────┼─────────────────────┐
+│  │  attendance-web            attendance-api                ▼                     │
+│  │  image: Node 24   "api:5080"  image: .NET 10 SDK  "db:1433"  attendance-db     │
+│  │  runs: Vite  ─── /api/* ──►  runs: dotnet watch  ────────►  image: SQL Server   │
+│  │  code: ./frontend (live)     code: ./backend (live)          data: volume db-data│
+│  └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **What `docker compose up -d` does:**
-1. Downloads the two images, the first time only.
-2. Creates a private network, so the containers can reach each other **by name**: the API connects to `db`, not `localhost`.
+1. Downloads the three images, the first time only.
+2. Creates a private network, so the containers can reach each other **by name**: the API connects to `db`, the web app to `api`.
 3. Starts **SQL Server** and waits until its health check passes (it really answers a query).
 4. Starts the **API** with `dotnet watch`, which builds the code, applies database migrations, adds the demo accounts,
    and listens on port 5080.
+5. Starts the **web app** (Vite dev server) on port 5174. The browser talks only to it; it forwards `/api/*` calls to the API.
 
 **Good to know**
-- **Edit code → the API reloads by itself.** Your `backend/` folder is shared live into the container.
+- **Edit code → it reloads by itself.** `backend/` and `frontend/` are shared live into their containers.
 - **Data survives restarts.** It lives in the `db-data` *volume*, a storage area managed by Docker. Only
   `docker compose down -v` deletes it.
-- **Ports** connect your computer to the containers: `5080` → the API, `1433` → SQL Server.
+- **Ports** connect your computer to the containers: `5174` → the app, `5080` → the API, `1433` → SQL Server.
+  *(The app uses 5174 rather than Vite's usual 5173, which other local projects often occupy.)*
 - **Build output** (`bin/`, `obj/`) stays inside Docker volumes, so it never mixes with your own OS's files.
 - Useful commands: `docker compose ps` (status) · `docker logs attendance-api --tail 50` (API log) ·
   `docker compose restart api`. Docker Desktop shows the same in its **Containers** tab.
@@ -130,10 +135,9 @@ Your computer (Windows / macOS / Linux)
 | Trusted clock: external time, backup, validation, 10 tests | ✅ |
 | Login and roles: JWT, hashed passwords, brute-force limit, 9 tests | ✅ |
 | Clock In / Clock Out / status: race-safe, DST-safe, 12 tests | ✅ |
-| Shift history and totals: DST-safe days, exact totals, 10 tests | ✅ |
-| React UI | ⏭️ next |
-| React UI | ⏳ |
-| Manager dashboard and corrections | ⏳ |
+| Shift history and totals: DST-safe days, nearest-minute totals that add up, 10 tests | ✅ |
+| React UI (employee): login, Clock In/Out, My week, phone-friendly, 10 tests | ✅ |
+| Manager dashboard and corrections | ⏭️ next |
 
 ## Documentation
 - [docs/PRD.md](docs/PRD.md): requirements, edge cases and design

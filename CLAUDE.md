@@ -7,7 +7,7 @@ Guidance for Claude Code when working in this repository.
 Home assignment (deadline 2026-11-22 08:00). The full spec is in [docs/PRD.md](docs/PRD.md). Read it before
 designing anything; decisions (`D-n`) and edge cases (`EC-n`) are referenced by ID in code and docs.
 
-**Stack:** ASP.NET Core (.NET 10, controllers) · EF Core 10 · SQL Server 2022 · React (Vite + TypeScript, not built yet).
+**Stack:** ASP.NET Core (.NET 10, controllers) · EF Core 10 · SQL Server 2022 · React 19 (Vite + TypeScript).
 
 ## The one hard rule
 Every Clock In / Clock Out time **must come from an external time API, in Europe/Zurich**.
@@ -21,7 +21,7 @@ Windows **Smart App Control** on the dev machine blocks every locally built .NET
 turned off. **Never run `dotnet build/run/test/ef` on Windows.** Run them in the Docker container.
 
 ```bash
-docker compose up -d                 # start SQL Server (attendance-db) + API (attendance-api, dotnet watch)
+docker compose up -d                 # start SQL Server (attendance-db) + API (attendance-api, dotnet watch) + web (attendance-web, Vite)
 docker compose down                  # stop (data kept); add -v to wipe the database
 curl http://localhost:5080/health    # "Healthy" = API up and database reachable
 docker logs attendance-api --tail 50
@@ -32,6 +32,8 @@ docker compose run --rm --no-deps api sh -c "cd /src && dotnet tool restore && <
 docker compose start api
 ```
 - Run tests: `dotnet test` (inside the container, as above).
+- Frontend: never run `npm`/`vite` on Windows either (esbuild is unsigned). Use the web container:
+  `docker exec attendance-web sh -c "npx tsc -b && npx vitest run"`. Port **5174** (5173 is taken by another local project).
 - Add a migration: `dotnet ef migrations add <Name> --project AttendanceClock.Api --output-dir Data/Migrations`.
   Migrations are applied automatically when the API starts in Development.
 - NuGet: pin **10.0.x** versions. Plain `dotnet add package` picks 11.x, which doesn't support net10.0.
@@ -68,6 +70,13 @@ backend/
   AttendanceClock.Tests/             # xUnit. Time/: fake HTTP handler. Auth/, Punches/, History/: real app in memory (ApiFactory) + test DB.
                                      # Punches/ swaps ITrustedClock for FakeTrustedClock (tests only!). DB test classes use
                                      # [Collection(DatabaseCollection.Name)] so they never run in parallel.
+frontend/                            # React 19 + Vite 8 + TypeScript 5.9 (container attendance-web, http://localhost:5174)
+  vite.config.ts                     # dev server on 5174; proxies /api → http://api:5080 (no CORS)
+  src/api.ts                         # all server calls + ApiError (ProblemDetails "code"); 401 → back to login
+  src/session.ts                     # login badge in localStorage
+  src/time.ts (+ time.test.ts)       # Zurich display helpers: read wall time from the server's ISO string, CET/CEST
+  src/useZurichClock.ts              # cosmetic live clock: server time + performance.now()
+  src/screens/                       # LoginScreen, ClockScreen (big button), WeekScreen
 docs/PRD.md                          # requirements and decisions
 docs/TECH-STACK.md                   # pros/cons + user impact per component (update when a component is added or changed)
 docs/TECH-STACK.pdf                  # visual version, generated from docs/visual/tech-stack.html with headless Edge:
