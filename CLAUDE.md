@@ -65,6 +65,7 @@ backend/
     Data/DevDataSeeder.cs            # demo accounts (Development only)
   AttendanceClock.Tests/             # xUnit. Time/: fake HTTP handler. Auth/: real app in memory (ApiFactory) + test DB
 docs/PRD.md                          # requirements and decisions
+docs/TECH-STACK.md                   # pros/cons + user impact per component (update when a component is added or changed)
 DECISIONS.md                         # reviewer-facing summary of decisions, edge cases, limitations (keep brief, update each step)
 README.md                            # how to run + project status (update the status table each step)
 docs/plans/                          # implementation plans, one per step

@@ -130,5 +130,6 @@ Your computer (Windows / macOS / Linux)
 ## Documentation
 - [docs/PRD.md](docs/PRD.md): requirements, edge cases and design
 - [DECISIONS.md](DECISIONS.md): key decisions, edge cases, what was left out, known limitations
+- [docs/TECH-STACK.md](docs/TECH-STACK.md): pros and cons of each component, and how each affects the user experience
 - [docs/plans/](docs/plans/): the plan for each step, with its results
 - [CLAUDE.md](CLAUDE.md): how Claude Code was guided on this project
