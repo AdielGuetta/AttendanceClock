@@ -1,4 +1,5 @@
 using AttendanceClock.Api.Data;
+using AttendanceClock.Api.Time;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,18 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' is not configured.");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+
+// Trusted clock (PRD §4): external time APIs only. Registration ORDER = try order: primary first, then backup.
+builder.Services.Configure<TimeProviderOptions>(builder.Configuration.GetSection(TimeProviderOptions.SectionName));
+builder.Services.AddHttpClient<TimeApiIoSource>(ConfigureTimeHttpClient);
+builder.Services.AddHttpClient<TimeNowSource>(ConfigureTimeHttpClient);
+builder.Services.AddTransient<IExternalTimeSource>(sp => sp.GetRequiredService<TimeApiIoSource>());
+builder.Services.AddTransient<IExternalTimeSource>(sp => sp.GetRequiredService<TimeNowSource>());
+builder.Services.AddTransient<ITrustedClock, FallbackTrustedClock>();
+
+// Errors as ProblemDetails (RFC 9457); "time service down" becomes a clear 503.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<TimeSourceUnavailableExceptionHandler>();
 
 // Add services to the container.
 
@@ -20,6 +33,8 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -40,3 +55,13 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
+
+static void ConfigureTimeHttpClient(HttpClient client)
+{
+    // The per-attempt timeout is enforced by FallbackTrustedClock; this is only a safety net.
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("AttendanceClock/1.0");
+}
+
+// Lets the test project start the app in memory (WebApplicationFactory), if needed later.
+public partial class Program;

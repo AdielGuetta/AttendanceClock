@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="AttendanceClock.Api/AttendanceClock.Api.csproj" />
+  <Project Path="AttendanceClock.Tests/AttendanceClock.Tests.csproj" />
 </Solution>

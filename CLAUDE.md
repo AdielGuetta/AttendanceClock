@@ -31,6 +31,7 @@ docker compose stop api
 docker compose run --rm --no-deps api sh -c "cd /src && dotnet tool restore && <command>"
 docker compose start api
 ```
+- Run tests: `dotnet test` (inside the container, as above).
 - Add a migration: `dotnet ef migrations add <Name> --project AttendanceClock.Api --output-dir Data/Migrations`.
   Migrations are applied automatically when the API starts in Development.
 - NuGet: pin **10.0.x** versions. Plain `dotnet add package` picks 11.x, which doesn't support net10.0.
@@ -54,7 +55,12 @@ backend/
     Data/AppDbContext.cs
     Data/Configurations/             # one IEntityTypeConfiguration per entity (lengths, indexes, constraints)
     Data/Migrations/
+    Time/                            # trusted clock: ITrustedClock, FallbackTrustedClock, provider sources, validation
+    Controllers/                     # TimeController (GET /api/time/now)
+  AttendanceClock.Tests/             # xUnit; Time/ uses a fake HTTP handler (no real network calls)
 docs/PRD.md                          # requirements and decisions
+DECISIONS.md                         # reviewer-facing summary of decisions, edge cases, limitations (keep brief, update each step)
+README.md                            # how to run + project status (update the status table each step)
 docs/plans/                          # implementation plans, one per step
 docker-compose.yml
 ```

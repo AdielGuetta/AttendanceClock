@@ -43,6 +43,8 @@ services:
       - ./backend:/src                                 # our code, shared live from Windows
       - api-bin:/src/AttendanceClock.Api/bin            # Linux build output stays inside Docker,
       - api-obj:/src/AttendanceClock.Api/obj            # separate from any Windows build files
+      - tests-bin:/src/AttendanceClock.Tests/bin        # same for the test project
+      - tests-obj:/src/AttendanceClock.Tests/obj
       - nuget-cache:/root/.nuget/packages               # downloaded libraries, reused between runs
     depends_on:
       db:
@@ -52,4 +54,6 @@ volumes:
   db-data:
   api-bin:
   api-obj:
+  tests-bin:
+  tests-obj:
   nuget-cache:
